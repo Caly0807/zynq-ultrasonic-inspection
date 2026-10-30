@@ -84,8 +84,8 @@
       "sha256": "eb643169bce257dc8f80447681d878b01500c6a743ad3e4f0aca1cbc39f0f26d"
     },
     "firmware/inspection/tests/native/uvc_fixture.c": {
-      "bytes": 3254,
-      "sha256": "ed90d10ff83ea99d1c39fcf738e30a2204744e346294c182440f16e66c86b0ea"
+      "bytes": 3360,
+      "sha256": "e77254dfa3900db14cfe8a17dae53f9ab3294bd111c5c323ba475209b3fc004a"
     },
     "firmware/inspection/tests/test_basic_vision.py": {
       "bytes": 16207,

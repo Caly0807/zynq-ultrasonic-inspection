@@ -73,7 +73,9 @@ int ioctl(int descriptor, unsigned long request, ...)
     return 0;
 }
 
-int poll(struct pollfd *descriptors, nfds_t count, int timeout)
+int uvc_fixture_poll(struct pollfd *descriptors, nfds_t count, int timeout) __asm__("poll");
+
+int uvc_fixture_poll(struct pollfd *descriptors, nfds_t count, int timeout)
 {
     if (count == 1 && descriptors[0].fd == camera_descriptor) {
         if (sequence >= 3 && !strcmp(getenv("UT_UVC_FIXTURE"), "recover")) {
