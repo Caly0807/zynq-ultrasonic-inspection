@@ -1,0 +1,35 @@
+{
+  "vision": {
+    "reference_id": 0,
+    "probe_id": 1,
+    "reference_size_mm": 30.0,
+    "probe_size_mm": 30.0,
+    "tip_offset_mm": null,
+    "max_error_px": 1.5,
+    "contact_tolerance_mm": 3.0
+  },
+  "scan": {
+    "start_mm": 0.0,
+    "end_mm": 50.0,
+    "step_mm": 5.0,
+    "soft_min_mm": 0.0,
+    "soft_max_mm": 100.0,
+    "settle_s": 0.2,
+    "world_origin_x_mm": 70.0,
+    "world_y_mm": 0.0,
+    "position_tolerance_mm": 3.0,
+    "max_pose_age_s": 0.5
+  },
+  "echo": {
+    "flaw_gate_us": [2.5, 8.0],
+    "backwall_gate_us": [8.5, 12.0],
+    "flaw_threshold_codes": 35.0,
+    "backwall_threshold_codes": 12.0,
+    "minimum_snr": 6.0,
+    "sound_speed_mps": 5900.0,
+    "time_zero_us": 0.0,
+    "calibrated": false,
+    "calibration_id": "",
+    "baseline_gate_us": null
+  }
+}

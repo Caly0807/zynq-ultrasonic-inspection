@@ -1,0 +1,39 @@
+/ {
+    touch_i2c: touch-i2c {
+        compatible = "i2c-gpio";
+        sda-gpios = <&touch_gpio 1 0>;
+        scl-gpios = <&touch_gpio 0 0>;
+        i2c-gpio,delay-us = <5>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        status = "okay";
+    };
+    ut_console: ut-console@43c00000 {
+        compatible = "utinspect,zynq-safe-console-1";
+        reg = <0x43c00000 0x1000>, <0x40400000 0x10000>,
+              <0x43000000 0x10000>, <0x43c10000 0x10000>,
+              <0x41200000 0x10000>;
+        reg-names = "capture", "adc-dma", "display-dma", "timing", "backlight";
+        clocks = <&clkc 15>, <&clkc 16>;
+        clock-names = "axi", "pixel";
+        assigned-clocks = <&clkc 15>, <&clkc 16>;
+        assigned-clock-rates = <50000000 25000000>;
+        status = "okay";
+    };
+};
+
+&capture { status = "disabled"; };
+&adc_dma { status = "disabled"; };
+&display_dma { status = "disabled"; };
+&timing { status = "disabled"; };
+&backlight { status = "disabled"; };
+
+&touch_gpio {
+    clocks = <&clkc 15>;
+    touchscreen-reset {
+        gpio-hog;
+        gpios = <2 0>;
+        output-high;
+        line-name = "touch-reset-inactive";
+    };
+};

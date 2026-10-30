@@ -1,0 +1,56 @@
+#!/bin/sh
+set -eu
+data=/run/utinspect-jtag-smoke
+lcd_pid=/run/utinspect-lvgl.pid
+vision_pid=/run/utinspect-vision.pid
+uvc_pid=/run/utinspect-uvc.pid
+case "${1:-}" in
+    start)
+        install -d -m 0700 -o utinspect -g utinspect "$data" "$data/lcd" "$data/vision"
+        if modprobe ut_platform >> "$data/lcd.log" 2>&1 && test -c /dev/ut_board; then
+            printf '%s\n' '<6>UT_CONSOLE: kernel transport present; requesting LCD process, not physical acceptance' > /dev/kmsg 2>/dev/null || true
+            chown root:utinspect /dev/ut_board
+            chmod 0660 /dev/ut_board
+            set -- --map "$data/lcd/map.csv" --waveform "$data/lcd/waveform.csv" --status "$data/lcd/status.json"
+            for adapter in /sys/class/i2c-dev/i2c-*; do
+                if test -f "$adapter/name" && test "$(cat "$adapter/name")" = touch-i2c; then
+                    device=/dev/$(basename "$adapter")
+                    if test -c "$device"; then
+                        chown root:utinspect "$device"
+                        chmod 0660 "$device"
+                        set -- "$@" --touch-i2c "$device"
+                        break
+                    fi
+                fi
+            done
+            start-stop-daemon --start --background --make-pidfile --pidfile "$lcd_pid" \
+                --chuid utinspect --exec /usr/bin/ut_lvgl_linux -- "$@" >> "$data/lcd.log" 2>&1 || true
+        else
+            printf '%s\n' 'LCD transport unavailable; HTTP service remains independent' >> "$data/lcd.log"
+            printf '%s\n' '<4>UT_CONSOLE: LCD transport unavailable; inspect module probe and clocks' > /dev/kmsg 2>/dev/null || true
+        fi
+        if test -c /dev/video0 && test -x /usr/bin/ut_uvc_capture; then
+            chown root:video /dev/video0
+            chmod 0660 /dev/video0
+            start-stop-daemon --start --background --make-pidfile --pidfile "$uvc_pid" \
+                --chuid utinspect:video --exec /usr/bin/ut_uvc_capture -- /dev/video0 "$data/vision" >> "$data/vision.log" 2>&1 || true
+            printf '%s\n' '<6>UT_CONSOLE: basic YUYV camera helper requested; inspect /vision for real frame freshness' > /dev/kmsg 2>/dev/null || true
+        else
+            printf '%s\n' 'ARM camera unavailable: /dev/video0 or native helper missing; no fake live image' >> "$data/vision.log"
+            printf '%s\n' '<5>UT_CONSOLE: ARM camera not started; device absent at boot; restart service after attaching camera' > /dev/kmsg 2>/dev/null || true
+        fi
+        ;;
+    stop)
+        start-stop-daemon --stop --quiet --oknodo --pidfile "$uvc_pid" --exec /usr/bin/ut_uvc_capture || true
+        start-stop-daemon --stop --quiet --oknodo --pidfile "$vision_pid" --exec /usr/bin/python3 || true
+        start-stop-daemon --stop --quiet --oknodo --pidfile "$lcd_pid" --exec /usr/bin/ut_lvgl_linux || true
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    status)
+        test -s "$lcd_pid" && kill -0 "$(cat "$lcd_pid")" 2>/dev/null
+        ;;
+    *) printf 'Usage: %s {start|stop|restart|status}\n' "$0" >&2; exit 2 ;;
+esac

@@ -1,0 +1,39 @@
+#!/bin/sh
+set -eu
+
+data_directory=/run/utinspect-jtag-smoke
+pid_file=/run/utinspect-jtag-smoke.pid
+
+case "${1:-}" in
+    start)
+        if [ -s "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+            exit 0
+        fi
+        install -d -m 0700 -o utinspect -g utinspect "$data_directory"
+        install -m 0600 -o utinspect -g utinspect /etc/utinspect/jtag-smoke.token "$data_directory/operator.token"
+        printf '%s\n' 'UT_JTAG_SMOKE: DEMO; volatile RAM only; HV/motion disabled' > "$data_directory/boot-mode.txt"
+        chown utinspect:utinspect "$data_directory/boot-mode.txt"
+        export PYTHONDONTWRITEBYTECODE=1
+        export PYTHONUNBUFFERED=1
+        export PYTHONPATH=/usr/share/utinspect
+        start-stop-daemon --start --background --make-pidfile --pidfile "$pid_file" \
+            --chuid utinspect --exec /usr/bin/python3 -- \
+            -m utinspect.device_app --bind 192.168.77.2 --peer 192.168.77.1 \
+            --port 8766 --mode DEMO --data "$data_directory" \
+            --token-file "$data_directory/operator.token" >> "$data_directory/service.log" 2>&1
+        ;;
+    stop)
+        start-stop-daemon --stop --quiet --oknodo --pidfile "$pid_file" --exec /usr/bin/python3 || true
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    status)
+        test -s "$pid_file" && kill -0 "$(cat "$pid_file")" 2>/dev/null
+        ;;
+    *)
+        printf 'Usage: %s {start|stop|restart|status}\n' "$0" >&2
+        exit 2
+        ;;
+esac

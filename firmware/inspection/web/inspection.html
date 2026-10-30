@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UT Studio · 手动面扫工作站</title>
+<style>
+:root{color-scheme:dark;--bg:#080f19;--card:#101d2c;--line:#223447;--text:#e7f1fa;--muted:#859bb1;--teal:#3dd9bd;--blue:#72aaff;--amber:#ffc270;--red:#ff737f}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#16344088,transparent 45%),var(--bg);font:14px/1.6 "Microsoft YaHei","Segoe UI",sans-serif;color:var(--text)}button,input{font:inherit}button,a.button{border:1px solid var(--line);background:#17293b;color:var(--text);padding:8px 13px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}button:hover,a.button:hover{border-color:var(--teal)}button:disabled{opacity:.35;cursor:not-allowed}.primary{background:var(--teal)!important;color:#062b25!important;border-color:var(--teal)!important;font-weight:700}.shell{max-width:1710px;margin:auto;padding:26px 30px 24px 218px}.rail{position:fixed;inset:0 auto 0 0;width:190px;padding:30px 20px;border-right:1px solid var(--line);background:#0a1420ed;display:flex;flex-direction:column;gap:25px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:1px}.brand b{background:#123c40;color:var(--teal);border:1px solid #28595c;border-radius:12px;padding:9px;font-size:18px}.micro{font-size:10px;letter-spacing:1.5px;color:var(--muted)}.rail nav{display:grid;gap:8px}.rail nav a{padding:12px 13px;color:var(--muted);text-decoration:none;border-radius:8px}.rail nav a.active{background:#15383d;color:var(--teal);border:1px solid #286068}.rail-note{margin-top:auto;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}.rail-note strong{display:block;color:var(--teal);margin-bottom:8px}header{display:flex;align-items:center;justify-content:space-between;gap:16px}.eyebrow{font-size:11px;color:var(--teal);letter-spacing:2px}h1{font-size:27px;letter-spacing:1px;margin:5px 0 6px}h2{font-size:15px;margin:0}.subtitle,.hint{color:var(--muted);font-size:12px}.header-actions,.actions{display:flex;flex-wrap:wrap;gap:8px}.banner{margin:20px 0 16px;border:1px solid #695237;background:#34271d80;color:var(--amber);border-radius:10px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}.banner strong{font-size:13px}.tag{border:1px solid #39536d;background:#15283a;color:var(--blue);font-size:11px;border-radius:20px;padding:4px 10px;white-space:nowrap}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.metric,.card{border:1px solid var(--line);background:linear-gradient(145deg,#122233,#0e1928);border-radius:13px;overflow:hidden}.metric{padding:15px 18px}.metric .label{font-size:11px;color:var(--muted)}.metric .number{font-size:27px;font-weight:650;line-height:1.5;font-variant-numeric:tabular-nums}.metric small{font-size:11px;color:var(--muted)}.teal{color:var(--teal)}.amber{color:var(--amber)}.blue{color:var(--blue)}.workspace{display:grid;grid-template-columns:1.05fr 1fr;gap:14px}.head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;border-bottom:1px solid var(--line)}.head .micro{margin-bottom:3px}.segmented{display:flex;gap:2px;border:1px solid var(--line);padding:3px;border-radius:8px}.segmented button{padding:4px 9px;font-size:11px;border:0;background:transparent;color:var(--muted)}.segmented button.active{background:#234351;color:var(--teal)}canvas{display:block;width:100%;height:365px;touch-action:none}.short canvas{height:185px}.legend{display:flex;gap:15px;flex-wrap:wrap;padding:0 19px 12px;color:var(--muted);font-size:11px}.legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}.view-note{padding:9px 17px;background:#112a32;color:#a2c7d0;border-top:1px solid #24434e;font-size:11px}.lower{display:grid;grid-template-columns:1.05fr 1fr;gap:14px;margin-top:14px}.bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.body{padding:16px 18px}.position-inputs{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:11px 0}.position-inputs label{font-size:12px;color:var(--muted)}input[type=number]{width:88px;padding:8px;background:#0a1521;border:1px solid var(--line);border-radius:7px;color:var(--text)}input[type=checkbox]{accent-color:var(--teal)}input[type=file]{max-width:100%;font-size:12px;margin-bottom:10px}.check{display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:12px;color:#b7cbdc}.facts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}.fact span{display:block;font-size:11px;color:var(--muted)}.fact b{font-size:18px;font-weight:600}.status-pill{padding:4px 10px;border-radius:6px;font-size:12px;background:#24303b;color:var(--amber)}.records{max-height:215px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--muted);font-size:10px;font-weight:400;padding:8px 13px;border-bottom:1px solid var(--line)}td{padding:9px 13px;border-bottom:1px solid #203044}tbody tr{cursor:pointer}tbody tr:hover{background:#193341}footer{display:flex;justify-content:space-between;gap:15px;color:var(--muted);font-size:11px;margin-top:17px}#toast{display:none;position:fixed;right:25px;bottom:25px;padding:14px 20px;max-width:550px;background:#193e43;border:1px solid #3b7a78;border-radius:10px;z-index:20;box-shadow:0 10px 50px #0008}#toast.error{background:#402632;border-color:#965166}.empty{padding:20px;color:var(--muted);text-align:center;font-size:12px}.help{border-left:2px solid #476b80;padding-left:10px;color:#9db4c7;font-size:11px;margin-top:12px}
+@media(min-width:1750px){canvas{height:420px}.short canvas{height:205px}}@media(max-width:1150px){.rail{width:150px;padding:24px 12px}.shell{padding-left:173px}.workspace,.lower,.bottom{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}header{align-items:flex-start}h1{font-size:23px}}@media(max-width:650px){.rail{display:none}.shell{padding:18px 12px}header{display:block}.header-actions{margin-top:12px}.metric{padding:12px}.metric .number{font-size:23px}.head{flex-wrap:wrap}canvas{height:340px}.banner{align-items:flex-start}.facts{gap:10px}footer{display:block}}
+</style>
+</head>
+<body>
+<aside class="rail"><div class="brand"><b>UT</b><div>STUDIO<div class="micro">INSPECTION LAB</div></div></div><nav><a href="#" class="active">◈　手动面扫</a><a href="#records">▤　点位与回波</a><a id="visionLink" href="http://127.0.0.1:8765/" target="_blank" rel="noopener">◎　视觉调试台</a></nav><div class="rail-note"><strong>位置 × 回波 × 深度</strong>先保存可信数据，再呈现空间指示。<br><br>不控制电机或高压<br>不自动开启发射<br>不依赖摄像头启动</div></aside>
+<main class="shell">
+<header><div><div class="eyebrow">ULTRASONIC / MANUAL MAPPING</div><h1>把回波，放回工件坐标。</h1><div class="subtitle" id="specLabel">80 × 80 × 30 mm · 手动坐标 · 原始回波可追溯</div></div><div class="header-actions"><button id="exportJson">数据 JSON</button><button id="exportCsv">小屏快照 CSV</button><button id="exportReport">离线报告</button><button class="primary" id="exportPng">导出图像</button></div></header>
+<div class="banner" id="sourceBanner"><div><strong id="sourceLabel">等待数据会话</strong><span id="sourceDetail"> · 不将演示或未标定数据标为实测缺陷</span></div><span class="tag" id="connection">连接中</span></div>
+<section class="metrics"><div class="metric"><div class="label">网格采样进度 · 非声束覆盖率</div><div class="number teal" id="coverage">—</div><small id="coverageDetail">未扫描区域保持未知</small></div><div class="metric"><div class="label">门区疑似网格</div><div class="number amber" id="suspects">—</div><small>是回波指示，不是已确认孔洞</small></div><div class="metric"><div class="label">可绘制深度的指示点</div><div class="number blue" id="depthCount">—</div><small>要求标定与法向深度条件成立</small></div><div class="metric"><div class="label">保存的回波 / 手动采样点</div><div class="number" id="pointCount">—</div><small>同一采集帧禁止填到多个位置</small></div></section>
+<section class="workspace">
+<article class="card"><div class="head"><div><div class="micro">01 / TOP VIEW</div><h2>二维顶面图</h2></div><div class="segmented"><button id="indicationMode" class="active">回波指示</button><button id="depthMode">反射深度</button></div></div><canvas id="mapCanvas" aria-label="手动采样网格顶视图"></canvas><div class="legend"><span><i style="background:#3dd9bd"></i>门区无指示</span><span id="suspectLegend">疑似：红色 / 深度模式按色阶</span><span><i style="background:#ffc270"></i>未标定</span><span><i style="background:#788ba0"></i>无效 / 耦合待查</span><span><i style="background:#263749"></i>未扫描</span></div><div class="legend" id="mapDepthLegend" style="display:none"><span>疑似反射 z</span><span style="width:110px;height:7px;background:linear-gradient(90deg,hsl(170 78% 65%),hsl(20 78% 65%));border-radius:4px"></span><span id="depthRange">0 → 30 mm</span></div><div class="view-note">点击网格只选择人工坐标，不移动探头。重复采样保留疑似记录，不用后来的正常点擦除。</div></article>
+<article class="card"><div class="head"><div><div class="micro">02 / SPATIAL INDICATIONS</div><h2>三维反射指示</h2></div><button id="resetView">复位视角</button></div><canvas id="volumeCanvas" aria-label="工件内反射深度指示示意"></canvas><div class="legend"><span class="teal">近表面</span><span>────── 深度色阶 ──────</span><span class="amber">近底面</span><span>拖动旋转 · z 向下</span></div><div class="view-note">仅绘制已标定的指示点，不重建孔形。十字标记尺寸不代表孔径，点云范围不代表孔高或体积。</div></article>
+</section>
+<section class="lower"><article class="card short"><div class="head"><div><div class="micro">03 / ROW DEPTH SECTION</div><h2 id="sectionTitle">当前扫描行 · 深度剖面</h2></div><span class="hint">X—z / 不跨行连成虚构表面</span></div><canvas id="sectionCanvas"></canvas></article><article class="card short"><div class="head"><div><div class="micro">04 / A-SCAN TRACEABILITY</div><h2>所选点回波</h2></div><span class="hint">包络预览 · 原始 4096 点保留</span></div><canvas id="waveCanvas"></canvas></article></section>
+<section class="bottom"><article class="card"><div class="head"><div><div class="micro">05 / MANUAL ACQUISITION</div><h2>人工移动，一点一记</h2></div><span class="tag" id="modeTag">未连接</span></div><div class="body"><div class="hint">坐标以工件左上角为原点，X 向右、Y 向下。人工输入未经视觉/机械标定，不承诺定位精度。</div><div class="position-inputs"><label>X / mm <input id="positionX" type="number" min="0" step="0.5" value="2.5"></label><label>Y / mm <input id="positionY" type="number" min="0" step="0.5" value="2.5"></label><button id="nextCell">下一格 →</button></div><input id="waveFile" type="file" accept=".csv"><label class="check"><input id="positionConfirmed" type="checkbox"><span>我已将探头移到所填 X / Y，并保持不动；这不是编码器测得的位置。</span></label><label class="check"><input id="advance" type="checkbox" checked><span>保存后提示下一格（蛇形顺序），不自动移动或连续采集。</span></label><div class="actions"><button class="primary" id="acquire" disabled>等待会话</button><button id="downloadWave" disabled>下载该点原始 CSV</button></div><div class="help" id="adapterNote">真实采集需要板端新鲜回波适配器；目前不会替你打开高压。</div></div></article>
+<article class="card"><div class="head"><div><div class="micro">06 / POINT INSPECTOR</div><h2>点位详情</h2></div><span class="status-pill" id="pointStatus">未选择采样点</span></div><div class="body"><div class="hint" id="submissionNote" role="status" aria-live="polite">每次保存使用独立提交编号；异常时不会自动重发。</div><div class="actions" id="submissionActions" style="display:none"><button id="restoreSubmission">回到待核对位置</button><button id="releaseSubmission" disabled>核对旧会话后解除锁定</button></div><div class="facts"><div class="fact"><span>人工 X / Y</span><b id="pointPosition">— / — mm</b></div><div class="fact"><span>来源</span><b id="pointSource">—</b></div><div class="fact"><span>距上表面深度 z</span><b class="teal" id="pointDepth">— mm</b></div><div class="fact"><span>距底面距离 t − z</span><b id="pointBottom">— mm</b></div></div><div class="hint" id="pointReason">先选择已保存点；未标定或无有效深度时不猜测数值。</div><div class="help">孔本身的高度、直径和真实形状：当前数据无法确定。单轴扫描只能给出扫描线上的深度剖面；二维分布需要多行采样，不能填满未扫区域。</div></div></article></section>
+<section class="card" id="records" style="margin-top:14px"><div class="head"><div><div class="micro">07 / ACQUISITION JOURNAL</div><h2>最近采样记录</h2></div><span class="hint">原始数据、判决、位置、来源一一关联</span></div><div class="records"><table><thead><tr><th>POINT</th><th>X / Y · mm</th><th>来源</th><th>门区结果</th><th>反射深度 · mm</th><th>原始帧</th></tr></thead><tbody id="pointRows"></tbody></table><div class="empty" id="emptyRecords">尚无记录，未扫描区域不会显示为正常。</div></div></section>
+<footer><span id="sessionLabel">UT STUDIO · 手动面扫工作站</span><span>无电机驱动 · 无高压控制 · 非 CT / 非孔形重建</span></footer>
+</main><div id="toast"></div>
+<script id="boot" type="application/json">null</script>
+<script>
+'use strict';
+const embedded = JSON.parse(document.getElementById('boot').textContent);
+const offline = embedded !== null;
+const palette = {UNSCANNED:'#203044',NO_INDICATION:'#3dd9bd',SUSPECT:'#ff737f',UNCALIBRATED:'#ffc270',INVALID:'#788ba0'};
+const labels = {UNSCANNED:'未扫描',NO_INDICATION:'门区未见指示',SUSPECT:'门区疑似反射',UNCALIBRATED:'未标定',INVALID:'无效 / 耦合待查'};
+let snapshot = embedded, selectedId = null, selectedColumn = 0, selectedRow = 0, colorMode = 'indication';
+let yaw = -0.64, pitch = 0.52, dragging = null, mapBounds = null, busy = false, signature = '', toastTimer = null;
+let connected = false, selectionInitialized = false;
+let pendingSubmission = null, pendingRestored = false, storageFault = '';
+const submissionStorageKey = 'utinspect.pending-submission.v1';
+const node = identifier => document.getElementById(identifier);
+const fixed = value => value === null || value === undefined ? '—' : Number(value).toFixed(2);
+async function requestJson(route,options={},timeoutMs=4000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(route,{...options,signal:controller.signal});return {ok:response.ok,status:response.status,data:await response.json()};}catch(error){if(error.name==='AbortError')throw new Error(route==='/api/point'?'采集请求超时，可能已保存；请先检查记录，再重新确认位置':'本机连接响应超时，当前只保留已读记录');throw error;}finally{clearTimeout(timer);}}
+function notify(message, error=false) { node('toast').textContent=message; node('toast').className=error?'error':''; node('toast').style.display='block'; clearTimeout(toastTimer); toastTimer=setTimeout(()=>node('toast').style.display='none',5500); }
+function selectedPoint() { return snapshot?.points.find(point=>point.point_id===selectedId) || null; }
+function cellAt(column,row) { return snapshot.cells[row*snapshot.columns+column]; }
+function cellColor(cell) { if(colorMode==='depth' && cell.depths_mm.length) return depthColor(Math.min(...cell.depths_mm)); return palette[cell.status]; }
+function depthColor(depth) { const fraction=Math.max(0,Math.min(1,depth/snapshot.spec.thickness_mm)); return `hsl(${170-fraction*150} 78% 65%)`; }
+function surface(identifier) { const canvas=node(identifier), bounds=canvas.getBoundingClientRect(), ratio=Math.min(window.devicePixelRatio||1,2); canvas.width=Math.max(1,Math.round(bounds.width*ratio)); canvas.height=Math.max(1,Math.round(bounds.height*ratio)); const context=canvas.getContext('2d'); context.scale(ratio,ratio); context.clearRect(0,0,bounds.width,bounds.height); context.font='11px "Microsoft YaHei",sans-serif'; return {canvas,context,width:bounds.width,height:bounds.height}; }
+function line(context,left,top,right,bottom,color,width=1) { context.beginPath(); context.moveTo(left,top); context.lineTo(right,bottom); context.strokeStyle=color; context.lineWidth=width; context.stroke(); }
+function cross(context,positionX,positionY,color,radius=5) { line(context,positionX-radius,positionY,positionX+radius,positionY,color,2); line(context,positionX,positionY-radius,positionX,positionY+radius,color,2); }
+function drawMap() {
+  if(!snapshot)return; const {context,width,height}=surface('mapCanvas'),spec=snapshot.spec;
+  const scale=Math.min((width-105)/spec.length_mm,(height-65)/spec.width_mm),left=(width-spec.length_mm*scale)/2+10,top=22;
+  mapBounds={left,top,scale,width:spec.length_mm*scale,height:spec.width_mm*scale};
+  for(const cell of snapshot.cells) {
+    const positionX=left+cell.column*spec.grid_mm*scale,positionY=top+cell.row*spec.grid_mm*scale;
+    const cellWidth=Math.min(spec.grid_mm,spec.length_mm-cell.column*spec.grid_mm)*scale,cellHeight=Math.min(spec.grid_mm,spec.width_mm-cell.row*spec.grid_mm)*scale;
+    context.globalAlpha=cell.status==='UNSCANNED'?0.7:0.65; context.fillStyle=cellColor(cell); context.fillRect(positionX+1,positionY+1,cellWidth-2,cellHeight-2); context.globalAlpha=1;
+    if(cell.status!=='UNSCANNED') { context.fillStyle=cellColor(cell); context.beginPath(); context.arc(positionX+cellWidth/2,positionY+cellHeight/2,2.4,0,Math.PI*2); context.fill(); }
+    if(cell.column===selectedColumn && cell.row===selectedRow) {context.strokeStyle='#effaff';context.lineWidth=2;context.strokeRect(positionX+1,positionY+1,cellWidth-2,cellHeight-2);}
+  }
+  for(let tick=0;tick<=4;tick++) { const horizontal=spec.length_mm*tick/4,vertical=spec.width_mm*tick/4; context.fillStyle='#89a3b8';context.textAlign='center';context.fillText(horizontal.toFixed(0),left+horizontal*scale,top+spec.width_mm*scale+20);context.textAlign='right';context.fillText(vertical.toFixed(0),left-10,top+vertical*scale+4); }
+  context.textAlign='left';context.fillStyle='#a4c1ce';context.fillText('Y / mm',Math.max(8,left-35),13);context.fillText('X / mm',left+spec.length_mm*scale-10,top+spec.width_mm*scale+39);
+}
+function drawVolume() {
+  if(!snapshot)return; const {context,width,height}=surface('volumeCanvas'),spec=snapshot.spec;
+  const scale=Math.min(width/(spec.length_mm+spec.width_mm)*1.18,(height-55)/(spec.length_mm+spec.width_mm+spec.thickness_mm)*1.8);
+  function project(positionX,positionY,depth) { const deltaX=positionX-spec.length_mm/2,deltaY=positionY-spec.width_mm/2; return [width/2+(deltaX*Math.cos(yaw)-deltaY*Math.sin(yaw))*scale,height*.49+(deltaX*Math.sin(yaw)+deltaY*Math.cos(yaw))*Math.sin(pitch)*scale+(depth-spec.thickness_mm/2)*Math.cos(pitch)*scale]; }
+  const corners=[[0,0,0],[spec.length_mm,0,0],[spec.length_mm,spec.width_mm,0],[0,spec.width_mm,0],[0,0,spec.thickness_mm],[spec.length_mm,0,spec.thickness_mm],[spec.length_mm,spec.width_mm,spec.thickness_mm],[0,spec.width_mm,spec.thickness_mm]].map(values=>project(...values));
+  function polygon(indices,color) {context.beginPath();indices.forEach((index,order)=>order?context.lineTo(...corners[index]):context.moveTo(...corners[index]));context.closePath();context.fillStyle=color;context.fill();}
+  polygon([0,1,2,3],'#6593ae18');polygon([0,3,7,4],'#4a7c9b16');polygon([3,2,6,7],'#64a5b512');
+  for(const [first,second] of [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]])line(context,...corners[first],...corners[second],'#537b9477');
+  for(let tick=1;tick<4;tick++){line(context,...project(spec.length_mm*tick/4,0,0),...project(spec.length_mm*tick/4,spec.width_mm,0),'#5c8b9a35');line(context,...project(0,spec.width_mm*tick/4,0),...project(spec.length_mm,spec.width_mm*tick/4,0),'#5c8b9a35');}
+  const valid=snapshot.points.filter(point=>point.reflector_depth_mm!==null).sort((first,second)=>first.position_mm[1]-second.position_mm[1]);
+  for(const point of valid){const projected=project(...point.position_mm,point.reflector_depth_mm),surfacePoint=project(...point.position_mm,0);line(context,...surfacePoint,...projected,'#60bca52b');cross(context,...projected,point.point_id===selectedId?'#ffffff':depthColor(point.reflector_depth_mm),point.point_id===selectedId?7:4);}
+  context.fillStyle='#87a8bf';context.fillText('X / mm',corners[1][0]+8,corners[1][1]);context.fillText('Y / mm',corners[3][0]-37,corners[3][1]+17);context.fillText(`z ↓ ${spec.thickness_mm} mm`,corners[6][0]+9,corners[6][1]);
+  context.textAlign='center';context.fillStyle=valid.length?'#92b2c3':'#ffc270';context.fillText(valid.length?'反射指示点 · 标记不代表实际孔径':'暂无可用的已标定深度，仅显示工件参考体',width/2,height-16);context.textAlign='left';
+}
+function drawSection() {
+  if(!snapshot)return;const {context,width,height}=surface('sectionCanvas'),left=48,top=18,plotWidth=width-75,plotHeight=height-51,spec=snapshot.spec;
+  node('sectionTitle').textContent=`当前扫描行 · Y≈${fixed(cellAt(0,selectedRow).center_mm[1])} mm`;
+  for(let tick=0;tick<=3;tick++){const depth=spec.thickness_mm*tick/3,positionY=top+plotHeight*tick/3;line(context,left,positionY,left+plotWidth,positionY,'#273d5066');context.fillStyle='#829cb3';context.textAlign='right';context.fillText(depth.toFixed(0),left-9,positionY+4);}
+  context.textAlign='left';context.fillStyle='#8da8bc';context.fillText('z / mm',8,12);context.fillText('0',left-3,height-13);context.fillText(`${spec.length_mm}  X / mm`,width-83,height-13);
+  for(const point of snapshot.points){if(point.reflector_depth_mm===null||Math.min(snapshot.rows-1,Math.floor(point.position_mm[1]/spec.grid_mm))!==selectedRow)continue;cross(context,left+point.position_mm[0]/spec.length_mm*plotWidth,top+point.reflector_depth_mm/spec.thickness_mm*plotHeight,point.point_id===selectedId?'#ffffff':depthColor(point.reflector_depth_mm),4);}
+}
+function drawWave() {
+  const {context,width,height}=surface('waveCanvas'),point=selectedPoint();if(!point){context.fillStyle='#8da8bc';context.textAlign='center';context.fillText('选择已保存点以查看原始回波的包络预览',width/2,height/2);return;}
+  const preview=point.preview,left=38,top=20,plotWidth=width-82,plotHeight=height-52,startTime=-0.5,endTime=Math.max(14,snapshot.echo.backwall_gate_us[1]+1),timeToX=sampleTime=>left+(sampleTime-startTime)/(endTime-startTime)*plotWidth;
+  for(const [gate,color] of [[snapshot.echo.flaw_gate_us,'#f7b45b20'],[snapshot.echo.backwall_gate_us,'#3dd9bd18']]){context.fillStyle=color;context.fillRect(timeToX(gate[0]),top,(gate[1]-gate[0])/(endTime-startTime)*plotWidth,plotHeight);}
+  for(let tick=0;tick<=4;tick++)line(context,left,top+plotHeight*tick/4,left+plotWidth,top+plotHeight*tick/4,'#293d4e77');
+  const baseline=point.diagnosis.baseline??128;line(context,left,top+(255-baseline)/255*plotHeight,left+plotWidth,top+(255-baseline)/255*plotHeight,'#7790a155');
+  preview.bins.forEach((range,index)=>{const sampleTime=(index*preview.stride-preview.trigger_index)*preview.sample_period_us;if(sampleTime<startTime||sampleTime>endTime)return;line(context,timeToX(sampleTime),top+(255-range[1])/255*plotHeight,timeToX(sampleTime),top+(255-range[0])/255*plotHeight,'#3dd9bd',1.5);});
+  context.fillStyle='#8da8bc';context.fillText('ADC',7,13);context.textAlign='center';for(let tick=0;tick<=3;tick++){const sampleTime=tick*endTime/3;context.fillText(sampleTime.toFixed(1),timeToX(sampleTime),height-13);}context.textAlign='left';context.fillText('µs',width-24,height-13);
+}
+function drawAll(){drawMap();drawVolume();drawSection();drawWave();}
+function inspect(){const point=selectedPoint();node('pointStatus').textContent=point?labels[point.status]:'该网格尚无记录';node('pointPosition').textContent=point?point.position_mm.map(fixed).join(' / ')+' mm':'— / — mm';node('pointSource').textContent=point?point.source:'—';node('pointDepth').textContent=fixed(point?.reflector_depth_mm)+' mm';node('pointBottom').textContent=fixed(point?.distance_from_bottom_mm)+' mm';node('downloadWave').disabled=!point||offline;node('pointReason').textContent=point?`${point.diagnosis.reason} · ${point.depth_reason} · 校准 ${point.diagnosis.calibration_id||'未标定'}`:'先选择已保存点；未标定或无有效深度时不猜测数值。';}
+function validPosition(){if(!snapshot)return false;const position=[node('positionX').value,node('positionY').value];return position.every(value=>String(value).trim()!==''&&Number.isFinite(Number(value)))&&Number(position[0])>=0&&Number(position[0])<=snapshot.spec.length_mm&&Number(position[1])>=0&&Number(position[1])<=snapshot.spec.width_mm;}
+function pendingMatchesSession(){return pendingSubmission&&snapshot&&pendingSubmission.payload.session_id===snapshot.session_id&&pendingSubmission.source===snapshot.source;}
+function savePending(value){sessionStorage.setItem(submissionStorageKey,JSON.stringify(value));pendingSubmission=value;}
+function clearPending(){sessionStorage.removeItem(submissionStorageKey);pendingSubmission=null;pendingRestored=false;}
+function markPending(state){if(!pendingSubmission)return;try{savePending({...pendingSubmission,state});}catch(error){storageFault='待核对状态无法保存在本页；请先检查记录，不能开始新采集。';}}
+function loadPending(){
+  try{
+    const text=sessionStorage.getItem(submissionStorageKey);if(text===null)return;
+    const value=JSON.parse(text),payload=value?.payload;
+    if(value.version!==1||!['DEMO','RECORDED','LIVE'].includes(value.source)||!['REQUESTED','BUSY','UNCONFIRMED','CONFLICT','COMMITTED'].includes(value.state)||!payload||typeof payload.session_id!=='string'||!payload.session_id||payload.session_id.length>128||typeof payload.submission_id!=='string'||!/^[A-Za-z0-9_-]{1,96}$/.test(payload.submission_id)||payload.position_confirmed!==true||!Array.isArray(payload.position_mm)||payload.position_mm.length!==2||!payload.position_mm.every(position=>Number.isFinite(position)&&position>=0&&position<=10000))throw new Error('Invalid pending submission');
+    if(Object.keys(payload).some(key=>!['session_id','submission_id','position_mm','position_confirmed','csv'].includes(key))||(value.source==='RECORDED'?(typeof payload.csv!=='string'||!payload.csv||payload.csv.length>850000||payload.csv.includes('\0')):Object.hasOwn(payload,'csv')))throw new Error('Invalid pending input');
+    pendingSubmission=value;
+  }catch(error){storageFault='无法读取上次待核对请求；请核对旧会话记录后，再明确解除本页锁定。';}
+}
+function restorePendingPosition(){
+  if(!pendingMatchesSession()||busy)return;
+  const [positionX,positionY]=pendingSubmission.payload.position_mm;
+  node('positionX').value=String(positionX);node('positionY').value=String(positionY);node('positionConfirmed').checked=false;
+  selectedColumn=Math.min(snapshot.columns-1,Math.floor(positionX/snapshot.spec.grid_mm));selectedRow=Math.min(snapshot.rows-1,Math.floor(positionY/snapshot.spec.grid_mm));
+  selectedId=cellAt(selectedColumn,selectedRow).selected_point_id;selectionInitialized=true;pendingRestored=true;signature='';
+}
+function reconcilePending(){
+  if(!pendingMatchesSession())return false;
+  const point=snapshot.points.find(item=>item.submission_id===pendingSubmission.payload.submission_id);
+  if(!point){if(!pendingRestored)restorePendingPosition();return false;}
+  if(!point.position_mm.every((position,index)=>position===pendingSubmission.payload.position_mm[index])){markPending('CONFLICT');return false;}
+  markPending('COMMITTED');
+  try{clearPending();}catch(error){storageFault='该点已保存，但无法清除本页待核对标记；核对记录后再解除锁定。';return false;}
+  selectionInitialized=true;selectedId=point.point_id;selectedColumn=Math.min(snapshot.columns-1,Math.floor(point.position_mm[0]/snapshot.spec.grid_mm));selectedRow=Math.min(snapshot.rows-1,Math.floor(point.position_mm[1]/snapshot.spec.grid_mm));
+  node('positionX').value=String(point.position_mm[0]);node('positionY').value=String(point.position_mm[1]);node('positionConfirmed').checked=false;signature='';
+  notify('已从记录核对此提交，未重复采集；请重新确认下一点位置。');return true;
+}
+function updateButton(){
+  if(!snapshot)return;
+  const matches=pendingMatchesSession(),retryable=!pendingSubmission||(matches&&['REQUESTED','BUSY'].includes(pendingSubmission.state));
+  node('acquire').disabled=offline||busy||!connected||snapshot.stopped||!validPosition()||!node('positionConfirmed').checked||!!storageFault||!retryable||(snapshot.source==='LIVE'&&!snapshot.capture_adapter_configured);
+  node('acquire').textContent=busy?'正在处理，请保持探头不动…':offline?'离线报告 · 只读':storageFault?'本页恢复锁定':pendingSubmission?(retryable?'核对上次提交 · 复用原编号':pendingSubmission.state==='COMMITTED'?'已保存 · 等待记录核对':'上次提交待核对 · 已锁定'):snapshot.source==='DEMO'?'生成此点 DEMO':snapshot.source==='RECORDED'?'导入此点原始回波':'请求一次新采集';
+  for(const identifier of ['positionX','positionY','nextCell','waveFile','advance'])node(identifier).disabled=busy||!!pendingSubmission||!!storageFault;
+  node('positionConfirmed').disabled=busy||!!storageFault||!retryable;
+  node('submissionActions').style.display=!offline&&(pendingSubmission||storageFault)?'flex':'none';
+  node('restoreSubmission').disabled=busy||!matches;
+  node('releaseSubmission').disabled=busy||!connected||(!storageFault&&(!pendingSubmission||matches));
+  node('submissionNote').textContent=offline?'只读报告不会恢复或重发任何采集请求。':storageFault||(!pendingSubmission?'每次保存使用独立提交编号；异常时不会自动重发。':!matches?`旧会话 ${pendingSubmission.payload.session_id.slice(0,12)} 的提交尚待核对。不会发给当前会话；请先检查旧记录，再解除锁定。`:`待核对 ${pendingSubmission.payload.submission_id.slice(0,12)} · ${pendingSubmission.payload.position_mm.join(' / ')} mm · ${pendingSubmission.state}。`+(retryable?'回到原位置并重新勾选后，只复用原提交；若此前未执行，仍可能请求一次采集。':pendingSubmission.state==='COMMITTED'?'已收到保存凭证，等待记录刷新，不再提交。':'先检查记录及适配器；本页不再触发此请求，需要核对后另开会话。'));
+}
+function selectCell(column,row,updateInputs=true){if(busy||!snapshot||!Number.isInteger(column)||!Number.isInteger(row)||column<0||row<0||column>=snapshot.columns||row>=snapshot.rows)return;selectionInitialized=true;selectedColumn=column;selectedRow=row;const cell=cellAt(column,row);selectedId=cell.selected_point_id;if(updateInputs&&!pendingSubmission){node('positionX').value=fixed(cell.center_mm[0]);node('positionY').value=fixed(cell.center_mm[1]);node('positionConfirmed').checked=false;}inspect();drawAll();updateButton();}
+function selectRecord(point){if(busy)return;const spec=snapshot.spec;selectCell(Math.min(snapshot.columns-1,Math.floor(point.position_mm[0]/spec.grid_mm)),Math.min(snapshot.rows-1,Math.floor(point.position_mm[1]/spec.grid_mm)));selectedId=point.point_id;if(!pendingSubmission){node('positionX').value=fixed(point.position_mm[0]);node('positionY').value=fixed(point.position_mm[1]);node('positionConfirmed').checked=false;}inspect();drawAll();updateButton();}
+function nextCell(){let nextColumn=selectedColumn+(selectedRow%2===0?1:-1),nextRow=selectedRow;if(nextColumn<0||nextColumn>=snapshot.columns){nextRow=(selectedRow+1)%snapshot.rows;nextColumn=nextRow%2===0?0:snapshot.columns-1;}selectCell(nextColumn,nextRow);}
+function refreshView(){
+  if(!offline&&snapshot.device?.vision_endpoint==='/vision'){node('visionLink').href='/vision';node('visionLink').target='_self';node('visionLink').textContent='◎　板端视觉定位';}
+  const spec=snapshot.spec;node('specLabel').textContent=`${spec.length_mm} × ${spec.width_mm} × ${spec.thickness_mm} mm · ${spec.grid_mm} mm 网格 · 人工坐标未标定`;
+  node('sourceLabel').textContent=snapshot.source==='DEMO'?'DEMO 演示数据 · 非实测':snapshot.source==='RECORDED'?'RECORDED 历史回波复盘':'LIVE 采集会话 · 已保存点位';
+  node('sourceDetail').textContent=' · 三维仅为反射指示，不是孔形重建';node('connection').textContent=offline?'离线报告 / 可交互查看':snapshot.device?(snapshot.device.runtime==='ARM_LINUX'?'FPGA 板端计算 · 电脑上位机':'主机验证服务 · 尚未迁入 FPGA'):'本机服务已连接';
+  node('coverage').textContent=snapshot.grid_coverage_percent.toFixed(1)+'%';node('coverageDetail').textContent=`${snapshot.sampled_cells} / ${snapshot.total_cells} 个网格有采样 · 非物理全覆盖`;node('suspects').textContent=snapshot.suspect_cells;node('depthCount').textContent=snapshot.depth_point_count;node('pointCount').textContent=snapshot.point_count;node('modeTag').textContent=snapshot.source;
+  node('waveFile').style.display=snapshot.source==='RECORDED'&&!offline?'block':'none';node('adapterNote').textContent=offline?'此报告不会启动采集；旋转三维图、选择网格和导出图像均可离线使用。':snapshot.source==='LIVE'?(snapshot.capture_adapter_configured?'已配置交换适配器：仅接受请求后完成的新鲜回波；此程序不启用发射。':'尚无新鲜采集适配器，真实采集按钮禁用。不能上传 CSV 冒充 LIVE。'):snapshot.source==='DEMO'?'此会话所有点均为程序合成，不能与历史或实测数据混合。':'导入 CSV 始终是历史回放；需要标准试块标定和法向深度条件后才显示 z。';
+  node('sessionLabel').textContent=`SESSION ${snapshot.session_id.slice(0,12)} · 手动位置 / 未承诺定位精度`;
+  node('depthRange').textContent=`0 → ${spec.thickness_mm} mm（距上表面）`;
+  if(snapshot.bridge_error)node('sourceDetail').textContent+=' · 小屏快照更新失败，以 session.json 为准';
+  node('positionX').max=spec.length_mm;node('positionY').max=spec.width_mm;
+  const rows=node('pointRows');rows.replaceChildren();for(const point of [...snapshot.points].reverse().slice(0,18)){const row=document.createElement('tr');for(const value of [String(point.index+1).padStart(3,'0'),point.position_mm.map(fixed).join(' / '),point.source,labels[point.status],fixed(point.reflector_depth_mm),point.frame_id.slice(0,25)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}row.onclick=()=>selectRecord(point);rows.append(row);}node('emptyRecords').style.display=snapshot.points.length?'none':'block';
+  if(!selectionInitialized){selectionInitialized=true;if(snapshot.points.length){const point=snapshot.points.find(item=>item.reflector_depth_mm!==null)||snapshot.points.at(-1);selectedId=point.point_id;selectedColumn=Math.min(snapshot.columns-1,Math.floor(point.position_mm[0]/spec.grid_mm));selectedRow=Math.min(snapshot.rows-1,Math.floor(point.position_mm[1]/spec.grid_mm));}const cell=cellAt(selectedColumn,selectedRow);node('positionX').value=fixed(cell.center_mm[0]);node('positionY').value=fixed(cell.center_mm[1]);node('positionConfirmed').checked=false;}inspect();drawAll();updateButton();
+}
+node('mapCanvas').addEventListener('click',event=>{if(!snapshot||!mapBounds)return;const bounds=node('mapCanvas').getBoundingClientRect(),positionX=event.clientX-bounds.left-mapBounds.left,positionY=event.clientY-bounds.top-mapBounds.top;if(positionX<0||positionY<0||positionX>=mapBounds.width||positionY>=mapBounds.height)return;selectCell(Math.min(snapshot.columns-1,Math.floor(positionX/mapBounds.scale/snapshot.spec.grid_mm)),Math.min(snapshot.rows-1,Math.floor(positionY/mapBounds.scale/snapshot.spec.grid_mm)));});
+node('volumeCanvas').addEventListener('pointerdown',event=>{dragging=[event.clientX,event.clientY];node('volumeCanvas').setPointerCapture(event.pointerId);});
+node('volumeCanvas').addEventListener('pointermove',event=>{if(!dragging)return;yaw+=(event.clientX-dragging[0])*.008;pitch=Math.max(.15,Math.min(1.2,pitch+(event.clientY-dragging[1])*.008));dragging=[event.clientX,event.clientY];drawVolume();});
+for(const eventName of ['pointerup','pointercancel','lostpointercapture'])node('volumeCanvas').addEventListener(eventName,()=>dragging=null);
+node('resetView').onclick=()=>{yaw=-.64;pitch=.52;drawVolume();};
+for(const [identifier,mode] of [['indicationMode','indication'],['depthMode','depth']])node(identifier).onclick=()=>{colorMode=mode;node('indicationMode').className=mode==='indication'?'active':'';node('depthMode').className=mode==='depth'?'active':'';node('mapDepthLegend').style.display=mode==='depth'?'flex':'none';drawMap();};
+node('positionConfirmed').onchange=updateButton;node('nextCell').onclick=()=>snapshot&&nextCell();
+node('restoreSubmission').onclick=()=>{restorePendingPosition();if(snapshot)refreshView();};
+node('releaseSubmission').onclick=()=>{if(offline||busy||!connected||(!storageFault&&(!pendingSubmission||pendingMatchesSession())))return;try{clearPending();storageFault='';node('positionConfirmed').checked=false;updateButton();notify('已明确解除本页锁定；旧请求可能执行过，旧会话记录仍须保留。',true);}catch(error){storageFault='本页存储仍不可用，未解除锁定；请先核对旧记录。';updateButton();}};
+for(const identifier of ['positionX','positionY'])node(identifier).oninput=()=>{node('positionConfirmed').checked=false;if(validPosition())selectCell(Math.min(snapshot.columns-1,Math.floor(Number(node('positionX').value)/snapshot.spec.grid_mm)),Math.min(snapshot.rows-1,Math.floor(Number(node('positionY').value)/snapshot.spec.grid_mm)),false);updateButton();};
+node('mapCanvas').tabIndex=0;
+node('mapCanvas').title='方向键选择网格；只改变人工坐标，不移动探头或开始采集';
+node('mapCanvas').addEventListener('keydown',event=>{if(!snapshot||busy)return;const steps={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},step=steps[event.key];if(!step)return;event.preventDefault();selectCell(Math.max(0,Math.min(snapshot.columns-1,selectedColumn+step[0])),Math.max(0,Math.min(snapshot.rows-1,selectedRow+step[1])));});
+function checkStateShape(incoming){
+  if(!incoming||incoming.schema!=='ut-manual-map/1'||typeof incoming.session_id!=='string'||!incoming.session_id||!['DEMO','RECORDED','LIVE'].includes(incoming.source))throw new Error('数据接口版本或来源不匹配');
+  const spec=incoming.spec;
+  if(!spec||!['length_mm','width_mm','thickness_mm','grid_mm'].every(key=>Number.isFinite(spec[key])&&spec[key]>0&&spec[key]<=10000)||!Number.isInteger(incoming.columns)||!Number.isInteger(incoming.rows)||incoming.columns<1||incoming.rows<1||incoming.columns>32||incoming.rows>32||Math.ceil(spec.length_mm/spec.grid_mm)!==incoming.columns||Math.ceil(spec.width_mm/spec.grid_mm)!==incoming.rows)throw new Error('网格尺寸不合法，保留上一份有效显示');
+  if(!Number.isInteger(incoming.point_count)||incoming.point_count<0||incoming.point_count>2048||!Array.isArray(incoming.points)||incoming.points.length!==incoming.point_count||!Array.isArray(incoming.cells)||incoming.cells.length!==incoming.columns*incoming.rows)throw new Error('点位快照不完整，保留上一份有效显示');
+  if(!incoming.echo||![incoming.echo.flaw_gate_us,incoming.echo.backwall_gate_us].every(gate=>Array.isArray(gate)&&gate.length===2&&gate.every(Number.isFinite)&&gate[0]>=0&&gate[1]>gate[0])||!Number.isFinite(incoming.grid_coverage_percent)||incoming.grid_coverage_percent<0||incoming.grid_coverage_percent>100||incoming.total_cells!==incoming.cells.length||!['sampled_cells','suspect_cells','depth_point_count'].every(key=>Number.isInteger(incoming[key])&&incoming[key]>=0&&incoming[key]<=Math.max(incoming.point_count,incoming.total_cells)))throw new Error('统计或闸门参数不合法');
+  for(const point of incoming.points){if(!point||point.source!==incoming.source||typeof point.point_id!=='string'||!point.point_id||!Array.isArray(point.position_mm)||point.position_mm.length!==2||!point.position_mm.every(Number.isFinite)||point.position_mm[0]<0||point.position_mm[0]>spec.length_mm||point.position_mm[1]<0||point.position_mm[1]>spec.width_mm||!Object.hasOwn(labels,point.status)||(point.reflector_depth_mm!==null&&(!Number.isFinite(point.reflector_depth_mm)||point.reflector_depth_mm<=0||point.reflector_depth_mm>=spec.thickness_mm)))throw new Error('点位来源、坐标或深度不合法');}
+  for(const point of incoming.points){const preview=point.preview;if(typeof point.frame_id!=='string'||typeof point.depth_reason!=='string'||!point.diagnosis||typeof point.diagnosis.reason!=='string'||!preview||!Array.isArray(preview.bins)||preview.bins.length<1||preview.bins.length>256||!Number.isInteger(preview.stride)||preview.stride<1||!Number.isInteger(preview.trigger_index)||preview.trigger_index<0||!Number.isFinite(preview.sample_period_us)||preview.sample_period_us<=0)throw new Error('原始回波预览信息不完整');}
+  const submissionIds=new Set();for(const point of incoming.points){if(point.submission_id===null||point.submission_id===undefined)continue;if(typeof point.submission_id!=='string'||!/^[A-Za-z0-9_-]{1,96}$/.test(point.submission_id)||submissionIds.has(point.submission_id))throw new Error('提交凭证格式错误或重复');submissionIds.add(point.submission_id);}
+  for(let index=0;index<incoming.cells.length;index++){const cell=incoming.cells[index];if(!cell||cell.column!==index%incoming.columns||cell.row!==Math.floor(index/incoming.columns)||!Object.hasOwn(labels,cell.status)||!Number.isInteger(cell.count)||cell.count<0||cell.count>2048||!Array.isArray(cell.center_mm)||cell.center_mm.length!==2||!cell.center_mm.every(Number.isFinite)||!Array.isArray(cell.depths_mm)||cell.depths_mm.length>cell.count||!cell.depths_mm.every(depth=>Number.isFinite(depth)&&depth>0&&depth<spec.thickness_mm))throw new Error('网格快照不合法');}
+  const visited=incoming.cells.filter(cell=>cell.count>0).length;if(incoming.sampled_cells!==visited||incoming.suspect_cells!==incoming.cells.filter(cell=>cell.status==='SUSPECT').length||incoming.depth_point_count!==incoming.points.filter(point=>point.reflector_depth_mm!==null).length||incoming.cells.reduce((total,cell)=>total+cell.count,0)!==incoming.point_count||Math.abs(incoming.grid_coverage_percent-100*visited/incoming.total_cells)>0.00001)throw new Error('统计与原始点位不一致');
+}
+function acceptState(incoming){checkStateShape(incoming);if(snapshot&&incoming.session_id===snapshot.session_id&&incoming.point_count<snapshot.point_count)return false;const changed=snapshot&&(incoming.session_id!==snapshot.session_id||incoming.source!==snapshot.source);if(changed){selectionInitialized=false;selectedId=null;selectedColumn=selectedRow=0;node('positionConfirmed').checked=false;signature='';}snapshot=incoming;return true;}
+async function poll(){if(offline)return;try{const response=await requestJson('/api/state');if(!response.ok)throw new Error('读取会话失败');acceptState(response.data);connected=true;reconcilePending();const current=snapshot.session_id+':'+snapshot.point_count;if(current!==signature){signature=current;refreshView();}node('connection').textContent=snapshot.stopped?'服务停止中':'本机服务已连接';updateButton();}catch(error){connected=false;node('connection').textContent='服务未连接 · 仅保留已读记录';updateButton();}setTimeout(poll,1000);}
+node('acquire').onclick=async()=>{
+  updateButton();if(node('acquire').disabled)return;
+  const requestSession=snapshot.session_id,recovering=!!pendingSubmission;busy=true;updateButton();let advanceAfterSave=false,pointSaved=false;
+  try{
+    let payload;
+    if(recovering){payload=pendingSubmission.payload;if(!payload.position_mm.every((position,index)=>position===Number(node(index===0?'positionX':'positionY').value)))throw new Error('待核对请求只能使用原位置；请先回到待核对位置。');}
+    else{
+      payload={session_id:requestSession,submission_id:crypto.randomUUID(),position_mm:[Number(node('positionX').value),Number(node('positionY').value)],position_confirmed:true};
+      if(snapshot.source==='RECORDED'){const file=node('waveFile').files[0];if(!file||file.size>850000)throw new Error('请选择不超过 850 KB 的原始回波 CSV');payload.csv=await file.text();}
+      if(snapshot.session_id!==requestSession)throw new Error('会话已切换，未发送采集请求；请重新确认位置。');
+      try{savePending({version:1,source:snapshot.source,state:'REQUESTED',payload});pendingRestored=true;}catch(error){throw new Error('本页存储不可用，未发送采集请求；请先允许本机页面存储。');}
+    }
+    const response=await requestJson('/api/point',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},15000),result=response.data;
+    if(!response.ok){if(result.submission_state==='REJECTED')clearPending();else if(['BUSY','UNCONFIRMED','CONFLICT'].includes(result.submission_state))markPending(result.submission_state);throw new Error(result.error||'提交结果待核对，未自动重发');}
+    const point=result.point;
+    if(result.submission_id!==payload.submission_id||point?.submission_id!==payload.submission_id||point.source!==snapshot.source||typeof point.point_id!=='string'||!Array.isArray(point.position_mm)||point.position_mm.length!==2||!point.position_mm.every((position,index)=>position===payload.position_mm[index]))throw new Error('保存凭证与原请求不匹配，请先核对记录。');
+    pointSaved=true;markPending('COMMITTED');
+    const stateResponse=await requestJson('/api/state');if(!stateResponse.ok)throw new Error('刷新失败，保留保存凭证，不会直接重复采集');
+    if(stateResponse.data.session_id!==requestSession)throw new Error('会话已切换，请检查旧会话记录后再继续');
+    acceptState(stateResponse.data);reconcilePending();
+    if(!snapshot.points.some(item=>item.submission_id===payload.submission_id&&item.point_id===point.point_id))throw new Error('记录尚未包含本次保存凭证，请等待刷新核对');
+    signature=snapshot.session_id+':'+snapshot.point_count;refreshView();notify(result.replayed?'已取回原提交结果，没有再次采集。':'该点回波与判决已保存；未自动移动或再次采集。');advanceAfterSave=!recovering&&!pendingSubmission&&!storageFault&&node('advance').checked;
+  }catch(error){notify(pointSaved?'点已保存，但刷新未确认：'+error.message:error.message,true);}
+  finally{busy=false;node('positionConfirmed').checked=false;updateButton();if(advanceAfterSave)nextCell();}
+};
+function download(name,data,type){const address=URL.createObjectURL(new Blob([data],{type})),link=document.createElement('a');link.href=address;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(address),1000);}
+node('exportJson').onclick=()=>snapshot&&download('inspection_session.json',JSON.stringify(snapshot,null,2),'application/json');
+function snapshotCsv(){const spec=snapshot.spec;let result=`UTMAP,1,${snapshot.columns},${snapshot.rows},${spec.length_mm},${spec.width_mm},${spec.thickness_mm},${spec.grid_mm},${snapshot.source},MANUAL_UNVERIFIED\n`;for(const cell of snapshot.cells)result+=`CELL,${cell.column},${cell.row},${cell.status},${cell.count},${cell.depths_mm.length?Math.min(...cell.depths_mm).toFixed(6):''}\n`;return result;}
+node('exportCsv').onclick=()=>snapshot&&download('map.csv',snapshotCsv(),'text/csv');
+node('exportReport').onclick=()=>{if(!snapshot)return;if(!offline){location.href='/export/report.html';return;}download('inspection_report.html','<!doctype html>\n'+document.documentElement.outerHTML,'text/html');};
+node('downloadWave').onclick=async()=>{const point=selectedPoint();if(!point||offline)return;try{const response=await fetch('/export/waveform.csv?point_id='+encodeURIComponent(point.point_id));if(!response.ok)throw new Error((await response.json()).error);download(point.point_id+'.csv',await response.text(),'text/csv');}catch(error){notify(error.message,true);}};
+node('exportPng').onclick=()=>{
+  if(!snapshot)return;
+  const canvas=document.createElement('canvas'),point=selectedPoint();canvas.width=1600;canvas.height=1080;
+  const context=canvas.getContext('2d');context.fillStyle='#09131f';context.fillRect(0,0,1600,1080);
+  context.font='bold 30px "Microsoft YaHei",sans-serif';context.fillStyle='#e7f1fa';context.fillText('UT STUDIO / 手动面扫记录',40,52);
+  context.font='18px "Microsoft YaHei",sans-serif';context.fillStyle='#ffc270';context.fillText(`${snapshot.source} · 反射指示示意 / 非孔形重建 · 人工坐标未标定`,40,89);
+  context.fillStyle='#9db6c9';context.fillText(`${snapshot.spec.length_mm} × ${snapshot.spec.width_mm} × ${snapshot.spec.thickness_mm} mm / ${snapshot.point_count} points / 网格采样 ${snapshot.grid_coverage_percent.toFixed(1)}%（非声束全覆盖）`,40,120);
+  context.font='14px "Microsoft YaHei",sans-serif';context.fillText(`青绿 门区无指示 / 疑似 ${colorMode==='depth'?'深度色阶':'红色'} / 灰 无效 / 暗色 未扫`,40,145);
+  for(const [identifier,left,top,width,height] of [['mapCanvas',20,155,760,490],['volumeCanvas',810,155,760,490],['sectionCanvas',20,720,760,240],['waveCanvas',810,720,760,240]])context.drawImage(node(identifier),left,top,width,height);
+  context.font='18px "Microsoft YaHei",sans-serif';context.fillStyle='#92aabe';context.fillText('二维顶视 / 未扫区域保持未知',40,675);context.fillText('三维深度指示 / 十字尺寸不代表孔径',830,675);
+  context.font='14px "Microsoft YaHei",sans-serif';context.fillText(`X-z 剖面 / Y≈${fixed(cellAt(0,selectedRow).center_mm[1])} mm`,40,707);context.fillText('所选点 A 扫包络 / 原始 4096 点可追溯',830,707);
+  context.fillStyle='#c7e9e1';context.fillText(point?`所选点 ${point.source} / X ${fixed(point.position_mm[0])} / Y ${fixed(point.position_mm[1])} / z ${fixed(point.reflector_depth_mm)} / 距底面 ${fixed(point.distance_from_bottom_mm)} mm`:'未选择已保存点；不估造深度数值',40,991);
+  context.fillStyle='#92aabe';context.font='16px "Microsoft YaHei",sans-serif';context.fillText('剖面与回波包络 / 孔高、孔径及真实形状未确定；此图不是 CT。',40,1020);
+  context.font='14px sans-serif';context.fillText('SESSION '+snapshot.session_id+' · '+new Date().toISOString(),40,1048);
+  const link=document.createElement('a');link.download='UT_'+snapshot.source+'_map.png';link.href=canvas.toDataURL('image/png');link.click();
+};
+window.addEventListener('resize',()=>snapshot&&drawAll());
+if(offline){refreshView();}else{loadPending();poll();}
+</script>
+</body>
+</html>

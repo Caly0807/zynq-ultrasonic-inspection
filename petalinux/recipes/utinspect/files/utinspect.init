@@ -1,0 +1,39 @@
+#!/bin/sh
+set -eu
+. /etc/default/utinspect
+
+case "${1:-}" in
+    start)
+        if [ -n "$UT_REQUIRE_DATA_MOUNT" ]; then
+            case "$UT_DATA_DIRECTORY" in "$UT_REQUIRE_DATA_MOUNT"/*) ;; *) exit 2 ;; esac
+            if ! awk -v target="$UT_REQUIRE_DATA_MOUNT" '$2 == target && $3 == "ext4" { found = 1 } END { exit !found }' /proc/mounts; then
+                printf '%s\n' 'utinspect: mount the reviewed ext4 SD data partition first; refusing volatile measurement storage.' >&2
+                exit 1
+            fi
+        elif [ "$UT_SOURCE_MODE" != DEMO ]; then
+            printf '%s\n' 'utinspect: a persistent data mount is required outside DEMO mode.' >&2
+            exit 1
+        fi
+        mkdir -p "$UT_DATA_DIRECTORY"
+        chown utinspect:utinspect "$UT_DATA_DIRECTORY"
+        chmod 0700 "$UT_DATA_DIRECTORY"
+        start-stop-daemon --start --background --make-pidfile --pidfile /run/utinspect-mapping.pid \
+            --chuid utinspect --startas /usr/sbin/utinspect-launch -- mapping
+        if [ -n "$UT_CAMERA_INDEX" ]; then
+            start-stop-daemon --start --background --make-pidfile --pidfile /run/utinspect-vision.pid \
+                --chuid utinspect --startas /usr/sbin/utinspect-launch -- vision
+        fi
+        ;;
+    stop)
+        start-stop-daemon --stop --oknodo --pidfile /run/utinspect-vision.pid || true
+        start-stop-daemon --stop --oknodo --pidfile /run/utinspect-mapping.pid || true
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        printf 'Usage: %s start|stop|restart\n' "$0" >&2
+        exit 2
+        ;;
+esac

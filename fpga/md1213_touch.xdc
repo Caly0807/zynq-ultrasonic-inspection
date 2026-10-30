@@ -1,0 +1,7 @@
+set_property -dict {PACKAGE_PIN R19 IOSTANDARD LVCMOS33 PULLUP TRUE DRIVE 4 SLEW SLOW} [get_ports touch_scl]
+set_property -dict {PACKAGE_PIN P20 IOSTANDARD LVCMOS33 PULLUP TRUE DRIVE 4 SLEW SLOW} [get_ports touch_sda]
+set_property -dict {PACKAGE_PIN M19 IOSTANDARD LVCMOS33 PULLUP TRUE DRIVE 4 SLEW SLOW} [get_ports touch_rst_n]
+set_property -dict {PACKAGE_PIN U19 IOSTANDARD LVCMOS33 DRIVE 4 SLEW SLOW} [get_ports touch_int]
+set_false_path -from [get_ports {touch_scl touch_sda touch_rst_n touch_int}] -to [get_cells -hier -filter {NAME =~ *touch_io/input_meta_reg*}]
+set_output_delay -clock sys_clk -max 2.000 [get_ports {touch_scl touch_sda touch_rst_n touch_int}]
+set_output_delay -clock sys_clk -min 0.000 [get_ports {touch_scl touch_sda touch_rst_n touch_int}]

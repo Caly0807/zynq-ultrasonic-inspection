@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+. /etc/default/utinspect
+cd /usr/share/utinspect
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONUNBUFFERED=1
+if [ "${1:-mapping}" = vision ]; then
+    test -n "$UT_CAMERA_INDEX"
+    exec /usr/bin/python3 -m utinspect.device_vision --bind "$UT_BIND_ADDRESS" --peer "$UT_ALLOWED_PEER" \
+        --port "$UT_VISION_PORT" --data "$UT_DATA_DIRECTORY" --camera-index "$UT_CAMERA_INDEX" \
+        >> "$UT_DATA_DIRECTORY/vision.log" 2>&1
+fi
+exec /usr/bin/python3 -m utinspect.device_app --bind "$UT_BIND_ADDRESS" --peer "$UT_ALLOWED_PEER" \
+    --port "$UT_MAPPING_PORT" --data "$UT_DATA_DIRECTORY" --mode "$UT_SOURCE_MODE" \
+    >> "$UT_DATA_DIRECTORY/service.log" 2>&1

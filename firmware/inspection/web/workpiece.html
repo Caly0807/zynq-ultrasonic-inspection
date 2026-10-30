@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UT Studio · 视觉定位调试台</title>
+<style>
+:root{color-scheme:dark;--bg:#09121e;--panel:#101e2e;--line:#23364a;--muted:#8b9fb5;--text:#e8f1f9;--cyan:#41d6c3;--amber:#ffbf69;--red:#ff727b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#163849 0,transparent 40%),var(--bg);color:var(--text);font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}button,input{font:inherit}button{border:1px solid var(--line);background:#192c40;color:var(--text);padding:9px 14px;border-radius:9px;cursor:pointer;transition:.15s}button:hover{border-color:var(--cyan);background:#1a3c49}button.primary{background:var(--cyan);color:#062721;border-color:var(--cyan);font-weight:700}button.warn{color:var(--amber);border-color:#755537}button:disabled{opacity:.4;cursor:default}a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
+.shell{max-width:1540px;margin:auto;padding:25px 32px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}.brand{display:flex;align-items:center;gap:14px}.logo{width:46px;height:46px;border:1px solid #3bcab58c;border-radius:14px;display:grid;place-items:center;background:#163b42;color:var(--cyan);font-weight:900;letter-spacing:-2px;font-size:22px}h1{margin:0;font-size:23px;letter-spacing:1px}h2{margin:0;font-size:16px}.caption{color:var(--muted);font-size:12px;letter-spacing:1px}.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid #2b5c5a;border-radius:30px;background:#12332f;color:var(--cyan);padding:6px 12px;font-size:12px}.dot{height:7px;width:7px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.metric{border:1px solid var(--line);border-radius:14px;background:linear-gradient(130deg,#152638,#0f1b29);padding:16px 20px}.metric .value{font-size:23px;font-weight:700;line-height:1.5}.metric .label{color:var(--muted);font-size:12px}.metric small{font-size:12px;color:var(--muted);font-weight:400}.main{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(330px,1fr);gap:18px}.card{border:1px solid var(--line);border-radius:15px;background:#0e1b2bdc;overflow:hidden}.card-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.card-body{padding:18px}.video-wrap{position:relative;background:#050b12;min-height:280px;display:grid;place-items:center;padding:12px}canvas{width:100%;height:auto;max-height:570px;object-fit:contain;display:block;cursor:crosshair}.video-tag{position:absolute;left:25px;bottom:22px;background:#08121ed9;border:1px solid #5375825c;padding:4px 10px;border-radius:6px;font-size:11px;color:#c3d8e8;pointer-events:none}.toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line)}.notice{padding:12px 18px;background:#102b31;color:#a6d7d0;font-size:12px;border-top:1px solid #21454a}.map-wrap{display:flex;justify-content:center;padding:16px;background:#0a1421}.map-wrap img{display:block;width:100%;max-width:400px;aspect-ratio:1;border:1px solid var(--line);border-radius:7px}.details{padding:10px 20px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.details .label{color:var(--muted);font-size:12px}.details .value{font-size:15px;color:#d9edf2}.lower{display:grid;grid-template-columns:1fr 1.55fr;gap:18px;margin-top:18px}.fields{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}input[type=number]{width:76px;border:1px solid var(--line);background:#091522;color:var(--text);padding:7px;border-radius:7px}input[type=checkbox]{accent-color:var(--cyan);width:15px;height:15px}label.check{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#b5c9da;margin:11px 0}.hint{font-size:12px;color:var(--muted);margin:8px 0}.history{max-height:220px;overflow:auto}.record{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.record .links{display:flex;gap:12px;font-size:12px}.record .kind{font-size:12px;color:var(--amber)}.empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}.statusbar{display:flex;justify-content:space-between;gap:20px;padding:15px 2px;color:var(--muted);font-size:12px}.statusbar span{overflow-wrap:anywhere}#toast{position:fixed;right:24px;bottom:24px;max-width:min(560px,90vw);border:1px solid #356b6e;background:#15343b;box-shadow:0 12px 50px #0008;border-radius:12px;padding:14px 20px;display:none;z-index:10}#toast.error{border-color:#a65057;background:#45242c}.focus-warning{color:var(--amber)}.count{color:var(--cyan)}@media(max-width:1000px){.main,.lower{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.shell{padding:18px}.card-head{flex-wrap:wrap}header{align-items:flex-start}h1{font-size:19px}}
+select{font:inherit;border:1px solid var(--line);background:#091522;color:var(--text);padding:8px;border-radius:7px}.workflow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 18px}.step{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#102330}.step strong{display:block;color:var(--cyan);font-size:13px}.step span{font-size:12px;color:var(--muted)}.tuning{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tuning label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#b5c9da}.tuning input{width:90px}.debug-value{overflow-wrap:anywhere;color:#c8e1ec;font-size:12px}.frozen{color:var(--amber)}@media(max-width:700px){.workflow,.tuning{grid-template-columns:1fr 1fr}.step{padding:8px}.step span{font-size:11px}}
+.badge.frozen{border-color:#755537;background:#332b20;color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="shell">
+<header><div class="brand"><div class="logo">UT</div><div><h1>视觉辅助超声探伤</h1><div class="caption">UT STUDIO / WORKPIECE LOCALIZATION</div></div></div><div class="badge" id="connection"><span class="dot"></span><span id="connectionText">正在连接摄像头</span></div></header>
+<div class="metrics">
+<div class="metric"><div class="label">工件规格 · L × W × H</div><div class="value" id="dimensions">80 × 80 × 30 <small>mm · 待确认</small></div></div>
+<div class="metric"><div class="label">顶面定位</div><div class="value" id="faceStatus">等待工件</div></div>
+<div class="metric"><div class="label">探头位置</div><div class="value" id="probeStatus">未定位</div></div>
+<div class="metric"><div class="label">真实超声异常 / 本次会话</div><div class="value"><span class="count" id="realCount">0</span> <small>采集适配器未接入</small></div></div>
+</div>
+<div class="workflow"><div class="step"><strong>01 · 输入画面</strong><span id="cameraStep">等待连接</span></div><div class="step"><strong>02 · 工件顶面</strong><span id="faceStep">自动候选 / 手选四角</span></div><div class="step"><strong>03 · 探头位置</strong><span id="probeStep">圆形外观 / 红贴点 / 手选</span></div><div class="step"><strong>04 · 标图与记录</strong><span id="exportStep">显式保存，不自动录像</span></div></div>
+<div class="main">
+<section class="card"><div class="card-head"><div><div class="caption">01 / CAMERA VIEW</div><h2>工件与探头定位</h2></div><span class="caption" id="frameInfo">等待画面</span></div><div class="video-wrap"><canvas id="camera" width="640" height="480"></canvas><div class="video-tag" id="modeLabel">浏览模式 · 固定相机与工件</div></div><div class="toolbar"><button class="primary" id="autoLock">确认候选顶面</button><button id="freeze">冻结画面</button><button id="corners">手动圈选四角</button><button id="probe">手选探头接触点</button><button id="reset">重新定位</button></div><div class="notice" id="guidance">先让铁块顶面四角清晰入镜，确认黄色候选框；自动候选只是几何检测，不判断材质和内部损伤。</div></section>
+<section class="card"><div class="card-head"><div><div class="caption">02 / SURFACE MAP</div><h2>顶面投影与标记</h2></div><span class="caption">平面估计 · 非计量结果</span></div><div class="map-wrap"><img id="topMap" src="/api/top.png" alt="工件顶面投影"></div><div class="details"><div><div class="label">接触点平面坐标</div><div class="value" id="coordinates">尺寸/接触点未确认</div></div><div><div class="label">画面清晰度</div><div class="value" id="focus">—</div></div><div><div class="label">定位方法</div><div class="value" id="method">红色贴点 / 手动点选</div></div><div><div class="label">数据与控制边界</div><div class="value">不输出电机或高压控制</div></div></div><div class="toolbar"><button id="save">保存当前图片</button><button class="warn" id="mark">手工测试标记</button></div><div class="notice">内部异常由真实回波诊断触发；“手工测试标记”只演示探头位置标图，绝不记为真实缺陷。</div></section>
+</div>
+<div class="lower">
+<section class="card"><div class="card-head"><div><div class="caption">03 / GEOMETRY</div><h2>尺寸与探头约束</h2></div></div><div class="card-body"><div class="fields"><input id="length" type="number" min="1" value="80" aria-label="长度毫米"><span>×</span><input id="width" type="number" min="1" value="80" aria-label="宽度毫米"><span>×</span><input id="thickness" type="number" min="1" value="30" aria-label="厚度毫米"><span>mm</span></div><label class="check"><input id="confirmed" type="checkbox"><span>已确认实际工件尺寸和毫米单位；更换工件后须重新确认</span></label><button id="applySpec">应用尺寸并重新定位</button><label class="check"><input id="contact" type="checkbox"><span>仅红色贴点模式：已确认贴点与接触点同位且位于顶面。圆形外壳中心不满足此条件，不能用于精确接触坐标。</span></label><div class="hint">手选四角或接触点会先冻结画面，选点后可从容保存测试标图，再恢复实时。相机或工件移动后必须重新定位；平面估计不是滑台机械坐标。</div></div></section>
+<section class="card"><div class="card-head"><div><div class="caption">04 / CAPTURE RECORDS</div><h2>图片与诊断记录</h2></div><span class="caption" id="historyCount">0 条</span></div><div class="history" id="history"><div class="empty">尚未保存图片。保存时生成原图、标注图、俯视图及 JSON 记录。</div></div><div class="notice">仅本机访问，不上传画面、不自动录像。此页是电脑端视觉调试台，不是已完成的板端 LVGL。</div></section>
+</div>
+<div class="lower">
+<section class="card"><div class="card-head"><div><div class="caption">05 / QUICK SETUP</div><h2>识别参数与复用配置</h2></div></div><div class="card-body"><div class="fields"><label for="probeMode">探头定位</label><select id="probeMode"><option value="round">无贴纸 · 圆形外观候选</option><option value="red">红色贴点</option><option value="manual">手选接触点</option></select></div><div class="tuning"><label>清晰度下限<input id="focusMin" type="number" min="0" max="10000" step="1" value="12"></label><label>红色饱和度下限<input id="redSaturation" type="number" min="1" max="255" value="130"></label><label>红色亮度下限<input id="redValue" type="number" min="1" max="255" value="65"></label><label>红点最小面积 / px<input id="redArea" type="number" min="1" max="10000" value="6"></label><label>圆半径下限 / %<input id="roundMin" type="number" min="1" max="39" step="1" value="6"></label><label>圆半径上限 / %<input id="roundMax" type="number" min="2" max="40" step="1" value="22"></label><label>圆检测票数阈值<input id="roundVotes" type="number" min="8" max="100" value="32"></label></div><div class="hint">半径比例以顶面投影面积平方根为基准。圆形检测只是几何外观候选；多圆时拒绝猜测，不把外壳中心作为接触点。</div><button id="applyVision">应用识别参数</button><div class="toolbar"><button id="saveProfile">保存调试配置</button><button id="loadProfile">重新加载配置</button></div><label class="check"><input id="restoreConfirmed" type="checkbox"><span>相机、工件、焦距和分辨率均未变化；已人工核对旧四角仍适用</span></label><button id="restoreFace">恢复已保存顶面</button><div class="hint">启动只加载参数，不自动锁定旧四角，也不恢复接触关系。固定上机后保存一份配置，之后可快速核对复用。</div></div></section>
+<section class="card"><div class="card-head"><div><div class="caption">06 / PIPELINE DIAGNOSTICS</div><h2>视觉链路状态</h2></div><span class="caption" id="apiVersion">等待后台版本</span></div><div class="card-body"><div class="hint">当前帧与冻结状态</div><div class="debug-value" id="frameDebug">—</div><div class="hint">定位结果 / 未定位原因</div><div class="debug-value" id="probeDebug">—</div><div class="hint">自动候选数量</div><div class="debug-value" id="candidateDebug">—</div><div class="hint">配置文件</div><div class="debug-value" id="profileDebug">—</div><div class="hint">边界：不控制滑台、高压或 FPGA，不从图片推断内部损伤。无贴纸模式用于先跑通可视化；精确接触位置留待固定后的标定。</div></div></section>
+</div>
+<div class="statusbar"><span id="output">图片保存目录：等待连接</span><button id="stop">停止摄像头与调试服务</button></div>
+</div>
+<div id="toast" role="status"></div>
+<script>
+const canvas = document.getElementById('camera');
+const context = canvas.getContext('2d');
+let mode = 'browse';
+let selectedCorners = [];
+let displayedFrameId = null;
+let latestState = null;
+let active = true;
+let lastHistory = '';
+let toastTimer;
+let synchronizeForms = true;
+let versionWarned = false;
+document.getElementById('mark').textContent = '视觉测试标记';
+
+function imagePixel(clientX, clientY, bounds, imageWidth, imageHeight) {
+  const scale = Math.min(bounds.width / imageWidth, bounds.height / imageHeight);
+  if (!(scale > 0)) return null;
+  const offsetX = (bounds.width - imageWidth * scale) / 2;
+  const offsetY = (bounds.height - imageHeight * scale) / 2;
+  const pixel = [(clientX - bounds.left - offsetX) / scale, (clientY - bounds.top - offsetY) / scale];
+  return pixel[0] >= 0 && pixel[0] < imageWidth && pixel[1] >= 0 && pixel[1] < imageHeight ? pixel : null;
+}
+
+function message(text, error = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = text;
+  toast.className = error ? 'error' : '';
+  toast.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 6500);
+}
+
+async function request(route, payload) {
+  const response = await fetch(route, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || '操作失败');
+  return result;
+}
+
+async function action(payload) {
+  try {
+    const result = await request('/api/action', payload);
+    if (['spec','settings','profile_load'].includes(payload.action)) synchronizeForms = true;
+    if (result.files) message('已保存：原图、标注图、俯视图与 JSON。' + (result.kind.includes('MANUAL') ? ' 此条为手工测试，不是真实缺陷。' : ''));
+    return result;
+  } catch (error) { message(error.message, true); return null; }
+}
+
+function chooseMode(value) {
+  mode = value;
+  selectedCorners = [];
+  const labels = {browse:'浏览模式 · 固定相机与工件', corners:'依次点击顶面四个角 · 相机与工件不能移动', probe:'点击探头与顶面的实际接触点（不是外壳中心）'};
+  document.getElementById('modeLabel').textContent = labels[value];
+}
+
+async function ensureFrozen() {
+  if (latestState?.visual_api_version !== 2) { message('请先停止旧后台，再重新双击启动脚本并刷新页面。', true); return false; }
+  if (latestState.frozen) return true;
+  const result = await action({action:'freeze', frame_id:displayedFrameId});
+  if (result) latestState.frozen = true;
+  return Boolean(result);
+}
+
+canvas.addEventListener('click', async event => {
+  const bounds = canvas.getBoundingClientRect();
+  const pixel = imagePixel(event.clientX, event.clientY, bounds, canvas.width, canvas.height);
+  if (!pixel) return;
+  if (mode === 'corners') {
+    selectedCorners.push(pixel);
+    if (selectedCorners.length === 4) {
+      await action({action:'corners', corners:selectedCorners, frame_id:displayedFrameId});
+      chooseMode('browse');
+    }
+  } else if (mode === 'probe') {
+    const result = await action({action:'probe', pixel, frame_id:displayedFrameId});
+    if (result) { chooseMode('browse'); message('已在冻结帧记录手选点，可点击“视觉测试标记”生成图片。保存后再恢复实时。'); }
+  }
+});
+
+document.getElementById('autoLock').onclick = () => action({action:'lock_auto', frame_id:displayedFrameId});
+document.getElementById('corners').onclick = async () => { if (await ensureFrozen()) chooseMode('corners'); };
+document.getElementById('probe').onclick = async () => {
+  if (!latestState?.face) { message('请先确认工件顶面，或手动圈选四角。', true); return; }
+  if (await ensureFrozen()) chooseMode('probe');
+};
+document.getElementById('freeze').onclick = async () => {
+  const result = await action({action:latestState?.frozen ? 'resume' : 'freeze', frame_id:displayedFrameId});
+  if (result) chooseMode('browse');
+};
+document.getElementById('reset').onclick = () => { chooseMode('browse'); action({action:'reset'}); };
+document.getElementById('save').onclick = () => action({action:'capture', frame_id:displayedFrameId});
+document.getElementById('mark').onclick = () => action({action:'manual_mark'});
+document.getElementById('applySpec').onclick = () => action({action:'spec', length_mm:Number(document.getElementById('length').value), width_mm:Number(document.getElementById('width').value), thickness_mm:Number(document.getElementById('thickness').value), dimensions_confirmed:document.getElementById('confirmed').checked});
+for (const identifier of ['length','width','thickness']) document.getElementById(identifier).oninput = () => {
+  document.getElementById('confirmed').checked = false;
+  document.getElementById('restoreConfirmed').checked = false;
+};
+document.getElementById('contact').onchange = event => action({action:'contact', confirmed:event.target.checked});
+document.getElementById('applyVision').onclick = () => action({action:'settings', settings:{
+  probe_mode:document.getElementById('probeMode').value, focus_min:Number(document.getElementById('focusMin').value),
+  red_saturation_min:Number(document.getElementById('redSaturation').value), red_value_min:Number(document.getElementById('redValue').value),
+  red_min_area_px:Number(document.getElementById('redArea').value), round_min_radius_fraction:Number(document.getElementById('roundMin').value)/100,
+  round_max_radius_fraction:Number(document.getElementById('roundMax').value)/100, round_vote_threshold:Number(document.getElementById('roundVotes').value)}});
+document.getElementById('saveProfile').onclick = async () => {
+  if (await action({action:'profile_save'})) message('已保存尺寸、识别参数和顶面参考。接触确认不会保存为已标定。');
+};
+document.getElementById('loadProfile').onclick = async () => {
+  if (await action({action:'profile_load'})) { chooseMode('browse'); document.getElementById('restoreConfirmed').checked = false; message('配置已加载；旧四角未自动启用，请重新选择或核对后恢复。'); }
+};
+document.getElementById('restoreFace').onclick = async () => {
+  if (await action({action:'restore_face', confirmed:document.getElementById('restoreConfirmed').checked})) {
+    document.getElementById('restoreConfirmed').checked = false; message('已恢复参考四角；接触关系仍需单独确认。');
+  }
+};
+document.getElementById('restoreConfirmed').onchange = () => {
+  document.getElementById('restoreFace').disabled = !latestState?.profile?.face_reference_compatible || !document.getElementById('restoreConfirmed').checked;
+};
+document.getElementById('stop').onclick = async () => {
+  try { await request('/api/stop', {}); active = false; document.getElementById('stop').disabled = true; document.getElementById('connectionText').textContent = '停止请求已发送'; message('请等待采集终端退出、释放相机后，再重新启动。'); }
+  catch (error) { message(error.message, true); }
+};
+
+async function updateFrame() {
+  if (!active) return;
+  try {
+    const response = await fetch('/api/frame.jpg');
+    if (!response.ok) throw new Error('取帧失败');
+    const bitmap = await createImageBitmap(await response.blob());
+    displayedFrameId = response.headers.get('X-Camera-Frame-Id');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    selectedCorners.forEach((corner, index) => {
+      context.beginPath(); context.arc(corner[0], corner[1], 6, 0, Math.PI * 2); context.fillStyle = '#ffbf69'; context.fill();
+      context.font = '18px sans-serif'; context.fillText(String(index + 1), corner[0] + 10, corner[1]);
+    });
+  } catch (error) { document.getElementById('connectionText').textContent = '采集连接中断'; }
+  setTimeout(updateFrame, 220);
+}
+
+async function updateState() {
+  if (!active) return;
+  try {
+    const response = await fetch('/api/state');
+    if (!response.ok) throw new Error('状态读取失败');
+    const state = await response.json();
+    latestState = state;
+    if (state.visual_api_version !== 2) {
+      document.getElementById('connectionText').textContent = '视觉后台需要重启';
+      document.getElementById('guidance').textContent = '页面已升级，但采集进程仍是旧版本。请点底部“停止摄像头与调试服务”，重新双击启动脚本，再刷新页面。';
+      document.getElementById('apiVersion').textContent = '旧后台 · 请重启';
+      for (const identifier of ['freeze','applyVision','saveProfile','loadProfile','restoreFace','corners','probe','mark']) document.getElementById(identifier).disabled = true;
+      if (!versionWarned) { versionWarned = true; message('代码已更新，需要停止并重新启动后台；仅刷新网页不能升级采集进程。', true); }
+      setTimeout(updateState, 650); return;
+    }
+    for (const identifier of ['freeze','applyVision','corners','probe']) document.getElementById(identifier).disabled = false;
+    const settings = state.visual_settings;
+    if (synchronizeForms) {
+      for (const [identifier, value] of Object.entries({length:state.spec.length_mm,width:state.spec.width_mm,thickness:state.spec.thickness_mm,probeMode:settings.probe_mode,focusMin:settings.focus_min,redSaturation:settings.red_saturation_min,redValue:settings.red_value_min,redArea:settings.red_min_area_px,roundMin:settings.round_min_radius_fraction*100,roundMax:settings.round_max_radius_fraction*100,roundVotes:settings.round_vote_threshold})) document.getElementById(identifier).value = value;
+      document.getElementById('confirmed').checked = state.spec.dimensions_confirmed;
+      synchronizeForms = false;
+    }
+    document.getElementById('contact').checked = state.contact_on_plane_confirmed;
+    document.getElementById('contact').disabled = settings.probe_mode !== 'red' || !state.face;
+    const spec = state.spec;
+    document.getElementById('dimensions').textContent = `${spec.length_mm} × ${spec.width_mm} × ${spec.thickness_mm} mm · ${spec.dimensions_confirmed ? '已确认' : '待确认'}`;
+    document.getElementById('faceStatus').textContent = state.face ? '顶面已锁定' : state.candidates.length ? '发现候选 · 待确认' : '待选顶面 · 可手选四角';
+    const displayedProbe = state.display_probe;
+    const methodLabels = {RED_STICKER:'红色贴点', ROUND_BODY:'圆形外观候选 · 非接触点', MANUAL_CONTACT:'手选接触点 · 测试'};
+    document.getElementById('probeStatus').textContent = displayedProbe ? methodLabels[displayedProbe.method] : '未定位';
+    document.getElementById('realCount').textContent = state.live_suspect_count;
+    document.getElementById('connectionText').textContent = state.camera_error ? '摄像头离线' : state.frozen ? state.source === 'LIVE_CAMERA' ? '画面已冻结 · 后台仍采集' : '离线图片已冻结 · 非实时' : state.source !== 'LIVE_CAMERA' ? '历史/演示图片 · 非实时' : '摄像头实时连接';
+    document.getElementById('connection').className = state.frozen ? 'badge frozen' : 'badge';
+    const visibleFrameId = displayedFrameId || state.frame_id;
+    const visibleSequence = visibleFrameId.split(':').pop();
+    const displayMode = state.frozen ? '冻结' : state.source === 'LIVE_CAMERA' ? '显示' : '离线';
+    document.getElementById('frameInfo').textContent = `${state.image_width} × ${state.image_height} / ${displayMode}帧 ${visibleSequence}`;
+    document.getElementById('frameInfo').title = `显示帧 ${visibleFrameId} · 后台累计 ${state.frame_count} 帧`;
+    const position = state.display_plane_position_mm;
+    document.getElementById('coordinates').textContent = position ? `X ${position[0].toFixed(1)} / Y ${position[1].toFixed(1)} mm ≈` : displayedProbe ? `像素 ${displayedProbe.pixel.map(value => value.toFixed(1)).join(' / ')} · 非接触坐标` : '等待定位 / 确认接触关系';
+    const focus = document.getElementById('focus');
+    focus.textContent = state.focus_warning ? '画面模糊 · 请对焦' : `清晰度指标 ${state.sharpness.toFixed(1)}`;
+    focus.className = state.focus_warning ? 'value focus-warning' : 'value';
+    document.getElementById('method').textContent = displayedProbe ? methodLabels[displayedProbe.method] : '等待外观候选、贴点或手选';
+    document.getElementById('output').textContent = '图片保存目录：' + state.output_directory;
+    document.getElementById('autoLock').disabled = !state.candidates.length;
+    document.getElementById('guidance').textContent = state.camera_error || (state.frozen ? `画面已冻结（显示帧龄 ${state.display_age_s.toFixed(1)} 秒），移动探头不会更新画面。选点或保存完成后点击“恢复实时”；此帧只用于测试，不绑定真实缺陷。` : state.focus_warning ? '清晰度低于当前阈值，请核对对焦、遮挡和光照。' : !state.face ? '确认黄色候选确为铁块顶面；没有合适候选时，用“手动圈选四角”。' : state.probe_reason === 'round_probe_missing' && !displayedProbe ? '顶面已锁定。请将探头放入青色顶面框内，尽量远离边缘并保持外观完整可见；当前只在框内寻找圆形外观，不判断内部损伤。' : '顶面已锁定，请保持相机与工件固定。圆形仅是外观候选；识别失败可手选点，先跑通测试标图。');
+    document.getElementById('guidance').className = state.frozen ? 'notice frozen' : 'notice';
+    document.getElementById('freeze').textContent = state.frozen ? '恢复实时' : '冻结画面';
+    document.getElementById('freeze').className = state.frozen ? 'primary' : '';
+    document.getElementById('cameraStep').textContent = state.camera_error ? '输入异常' : state.source !== 'LIVE_CAMERA' ? '离线图片调试 · 非实时' : state.frozen ? '冻结显示 / 仍在取流' : '实时取流正常';
+    document.getElementById('faceStep').textContent = state.face ? '顶面已锁定' : `${state.candidates.length} 个候选 / 等待确认`;
+    document.getElementById('probeStep').textContent = displayedProbe ? methodLabels[displayedProbe.method] : '等待定位 / 可手选兜底';
+    document.getElementById('exportStep').textContent = `${state.history.length} 条最近记录 / 无真实超声接入`;
+    document.getElementById('mark').disabled = !state.face || !displayedProbe;
+    const reasons = {ok:'红贴点唯一且在顶面内',body_center_not_contact:'检测到圆形外观中心；高于顶面，不输出接触毫米坐标',round_probe_missing:'已选顶面内未检出圆形外观：先确认探头在框内，再检查遮挡、半径和票数；未检出不等于失焦',multiple_round_probes_ambiguous:'有多个圆形候选，拒绝猜测，可手选或缩小参数范围',red_sticker_missing:'未检测到顶面内的红贴点',multiple_red_stickers_ambiguous:'有多个红贴点，拒绝猜测',manual_mode:'手选模式，请选择接触点',frame_blurred:'当前图像低于清晰度阈值',select_workpiece_face:'先确认顶面四角'};
+    document.getElementById('apiVersion').textContent = 'VISUAL API / 2';
+    document.getElementById('frameDebug').textContent = `输入帧龄 ${state.camera_age_s.toFixed(2)} s · 显示帧龄 ${state.display_age_s.toFixed(2)} s · ${state.frozen ? '冻结帧测试' : state.source === 'LIVE_CAMERA' ? '实时显示' : '离线图片'} · 状态帧 ${state.frame_id} · 后台累计 ${state.frame_count} 帧`;
+    document.getElementById('probeDebug').textContent = reasons[state.probe_reason] || state.probe_reason;
+    document.getElementById('candidateDebug').textContent = `顶面 ${state.candidates.length} / 探头 ${state.probe_candidates.length}；几何候选不证明材质或缺陷`;
+    document.getElementById('profileDebug').textContent = `${state.profile.path || '未配置路径'} · ${state.profile.exists ? '已有保存文件' : '尚未保存'} · ${state.profile.has_face_reference ? state.profile.face_reference_compatible ? '参考四角待人工核对' : '相机/分辨率不匹配，不可恢复' : '没有旧四角'}`;
+    document.getElementById('saveProfile').disabled = !state.profile.path;
+    document.getElementById('loadProfile').disabled = !state.profile.exists;
+    document.getElementById('restoreFace').disabled = !state.profile.face_reference_compatible || !document.getElementById('restoreConfirmed').checked;
+    document.getElementById('topMap').src = '/api/top.png?frame=' + encodeURIComponent(state.frame_id);
+    const historySignature = JSON.stringify(state.history.map(record => record.files.json));
+    if (historySignature !== lastHistory) {
+      lastHistory = historySignature;
+      const history = document.getElementById('history');
+      if (state.history.length) history.replaceChildren();
+      for (const record of [...state.history].reverse()) {
+        const row = document.createElement('div'); row.className = 'record';
+        const description = document.createElement('div');
+        const title = document.createElement('div'); title.className = 'kind'; title.textContent = record.kind;
+        const detail = document.createElement('div'); detail.className = 'hint'; detail.textContent = (record.frozen_frame ? '冻结帧 / ' : '') + (record.plane_position_mm ? `平面估计：${record.plane_position_mm.map(value => value.toFixed(1)).join(', ')} mm` : '未声明接触毫米精度 · 原图与数据均保留');
+        description.append(title, detail);
+        const links = document.createElement('div'); links.className = 'links';
+        for (const [name, label] of [['raw','原图'], ['annotated','标注图'], ['top','俯视图'], ['json','JSON']]) {
+          const link = document.createElement('a'); link.href = '/captures/' + encodeURIComponent(record.files[name]); link.target = '_blank'; link.rel = 'noopener'; link.textContent = label; links.append(link);
+        }
+        row.append(description, links); history.append(row);
+      }
+    }
+    document.getElementById('historyCount').textContent = `${state.history.length} 条最近记录`;
+  } catch (error) { document.getElementById('connectionText').textContent = '调试服务未连接'; }
+  setTimeout(updateState, 650);
+}
+
+updateFrame();
+updateState();
+</script>
+</body>
+</html>

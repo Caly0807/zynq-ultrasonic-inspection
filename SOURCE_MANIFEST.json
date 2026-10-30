@@ -1,0 +1,656 @@
+{
+  "schema": "ut-public-source-candidate/1",
+  "source_date": "2026-10-30",
+  "status": "PUBLIC_SOURCE_SNAPSHOT",
+  "license_selected": true,
+  "github_publish_approved": true,
+  "contains_boot_images": false,
+  "contains_vendor_ip": false,
+  "physical_touch_verified": false,
+  "real_ultrasound_closed_loop_verified": false,
+  "excluded_test_modules": [
+    "test_board_network_guard.py",
+    "test_busybox_runtime.py",
+    "test_ethernet_probe.py",
+    "test_jtag_image_audit.py",
+    "test_linux_boot_tools.py",
+    "test_public_source.py",
+    "test_release_preparation.py",
+    "test_source_download.py"
+  ],
+  "files": {
+    ".github/workflows/source-tests.yml": {
+      "bytes": 1164,
+      "sha256": "3f2476f3a0730a99590fc9051635ad83f62c8aeb865e05c737a5292e1332d0f4"
+    },
+    "LICENSE": {
+      "bytes": 1096,
+      "sha256": "946f6ff37ea6d38a0cc519dabd0f9feecc916e54a3024d2010f193adbd87976b"
+    },
+    "LICENSES/LVGL-MIT.txt": {
+      "bytes": 1072,
+      "sha256": "27a80bd36832ab42d35ad60c08b2b230a807a9bc0d58e94ec1531543dc49cbe8"
+    },
+    "LICENSES/Noto-CJK-NOTICE.txt": {
+      "bytes": 434,
+      "sha256": "8a93b7f6f9c542609146ade46948b303eec7412a8571b2fd03a505f6deed7d70"
+    },
+    "PUBLICATION_CHECKLIST.md": {
+      "bytes": 1070,
+      "sha256": "fcf20167967c49f527a5f18a1a43ae13acbcfaa78cdd61f22c9b377474e741cb"
+    },
+    "README.md": {
+      "bytes": 4649,
+      "sha256": "07e708209db6f08eea4dbe8e5b9dc2d7c9223c0769472443e93e53edec2074d9"
+    },
+    "SAFETY.md": {
+      "bytes": 1053,
+      "sha256": "22279f785b35fd6adfc394aca7340958e83ffc2b2750d44f09b42dc4c45b746c"
+    },
+    "THIRD_PARTY_NOTICES.md": {
+      "bytes": 1314,
+      "sha256": "85374a3f39000addbbe204ae49de95c5ec1c476165897b9c5e23dfb8cbf8219c"
+    },
+    "firmware/inspection/docs/manual_mapping_contract.md": {
+      "bytes": 12738,
+      "sha256": "9fc585e3f1c4c3a45ed08808de5bedd28aea0cd1c5d3d128c0e733b57f757caa"
+    },
+    "firmware/inspection/manual_scan.example.json": {
+      "bytes": 472,
+      "sha256": "7ffb56602c9da0c15d234372de5d9a4c79c471017494f975834659fb7e6b4c37"
+    },
+    "firmware/inspection/requirements.txt": {
+      "bytes": 46,
+      "sha256": "8d2e39d22ef1ee47984e2af49ae59ae5fc4f52fc62116897f901ca1a7066ea8a"
+    },
+    "firmware/inspection/run_pc.cmd": {
+      "bytes": 597,
+      "sha256": "46670695f9902a949d22eb6957f2c94dfec65da7dc71f04456c3ed22e5547858"
+    },
+    "firmware/inspection/run_pc.py": {
+      "bytes": 950,
+      "sha256": "6b1dd30a163081624eef4e122bf3642d611611b777410007ab823a89251c6d99"
+    },
+    "firmware/inspection/settings.example.json": {
+      "bytes": 787,
+      "sha256": "660581f5a72e09cc0c85c6852df52c842e6d19cb9661dd5be2cd6602f5857f04"
+    },
+    "firmware/inspection/setup_pc.ps1": {
+      "bytes": 901,
+      "sha256": "d080faaa77e85c569758f79a1ed11eb89c17ea888c74fe187050c015b8cc89dc"
+    },
+    "firmware/inspection/tests/lvgl_csv_probe.c": {
+      "bytes": 584,
+      "sha256": "eb643169bce257dc8f80447681d878b01500c6a743ad3e4f0aca1cbc39f0f26d"
+    },
+    "firmware/inspection/tests/native/uvc_fixture.c": {
+      "bytes": 3236,
+      "sha256": "d56622bf979d0d984f9a35edd38066179ad98bdf21c66b086a65157489033f59"
+    },
+    "firmware/inspection/tests/test_basic_vision.py": {
+      "bytes": 16207,
+      "sha256": "6d3b95fb7b2561321ba2305e160dd2e8f67678431124c78bd6c5252ee7e314d7"
+    },
+    "firmware/inspection/tests/test_basic_vision_web.py": {
+      "bytes": 6892,
+      "sha256": "2da29b1ca6dcc46988d059b5d6e282d154af7397ffdd8420ed8c7b0b60950630"
+    },
+    "firmware/inspection/tests/test_board_acceptance.py": {
+      "bytes": 3819,
+      "sha256": "00fb26b1dd369f4c43f3f31ce8c5d44ca4359a6f7e7f82c846a5b335a99ad7d5"
+    },
+    "firmware/inspection/tests/test_board_bundle.py": {
+      "bytes": 3233,
+      "sha256": "5eb31161a743db4f1bb922e78488e62d01abddf7e8c144672fb42c6a59152134"
+    },
+    "firmware/inspection/tests/test_camera.py": {
+      "bytes": 5298,
+      "sha256": "5b14ce73dd32a895042c5a26ba95e74490e0e5be52b3caeb11889da28226a5d5"
+    },
+    "firmware/inspection/tests/test_cli.py": {
+      "bytes": 2500,
+      "sha256": "21a881153092e456cb246c4821c34fab3e94573f61b276675561720766b043cf"
+    },
+    "firmware/inspection/tests/test_device_app.py": {
+      "bytes": 10402,
+      "sha256": "28d556d8dc397ce231598658c2cdf6323a32b87dacaf95e5b7cb514bf2a28ed7"
+    },
+    "firmware/inspection/tests/test_device_vision.py": {
+      "bytes": 4127,
+      "sha256": "5db37cde7b3c86f94a334245667b7e55214578fc8f46966e8b75b3c27baebb63"
+    },
+    "firmware/inspection/tests/test_echo.py": {
+      "bytes": 5014,
+      "sha256": "e717a7acb4c55515490963a9615b3b68951b60d2355d119748ad629b2ccc8cae"
+    },
+    "firmware/inspection/tests/test_linux_console.py": {
+      "bytes": 11719,
+      "sha256": "3a65d9bfd1b4b325f0ee2a1f1a7d11f70fe9dd51ffd8d355e45453ead803436a"
+    },
+    "firmware/inspection/tests/test_mapping.py": {
+      "bytes": 8845,
+      "sha256": "38e8bfd33bb3ab5641353a1f5242ef89ec36afc857aa74a209d8c3199306248c"
+    },
+    "firmware/inspection/tests/test_mapping_app.py": {
+      "bytes": 17920,
+      "sha256": "0a7e81838e9b14fe0360ab85003407761465084a55a3d8df51a287c14f794410"
+    },
+    "firmware/inspection/tests/test_mapping_web.py": {
+      "bytes": 24017,
+      "sha256": "5ea9e33c37fbfcdd6c15d8b1c8386f1705053e34194194e976f33ed21720e348"
+    },
+    "firmware/inspection/tests/test_report.py": {
+      "bytes": 13068,
+      "sha256": "2fd9ded1246526d7f01382eba9b4ee1f1876d8ae72253ae700ca54b8c73dbfd5"
+    },
+    "firmware/inspection/tests/test_scan_control.py": {
+      "bytes": 6656,
+      "sha256": "4d814535fa0d1a157174729dc52decddaa29474fc23610fcd09938669f323b60"
+    },
+    "firmware/inspection/tests/test_transport_api.py": {
+      "bytes": 5264,
+      "sha256": "c4c85de85c458085968ff9e13754ce783564fe3257fbf7568b799cd94d67b11e"
+    },
+    "firmware/inspection/tests/test_uvc_capture.py": {
+      "bytes": 4255,
+      "sha256": "6ab679e553b9882b5555a5479459c177efbf87a01edf2679761caa780d8e549d"
+    },
+    "firmware/inspection/tests/test_vision_scan.py": {
+      "bytes": 10137,
+      "sha256": "92cbab1165abbb2c0ebca94cb5a8ba2c67edc57b429d0735bf31c9f4db9e0314"
+    },
+    "firmware/inspection/tests/test_visual_workflow.py": {
+      "bytes": 18447,
+      "sha256": "62bd9695583fdeed887d80e6bc6acf2cd4b82ea37a8040bd2af9c7d0050ff24c"
+    },
+    "firmware/inspection/tests/test_workpiece.py": {
+      "bytes": 16620,
+      "sha256": "672f64392d5c5088634f74e9b7fb35fe5e7c8259df2bbd097648fdbef29d037f"
+    },
+    "firmware/inspection/tests/test_workpiece_web.py": {
+      "bytes": 6926,
+      "sha256": "11ef389f03d446bca78fb33ba4c99ee9be5e414f93945355ef1b39080e609e95"
+    },
+    "firmware/inspection/utinspect/__init__.py": {
+      "bytes": 111,
+      "sha256": "152f7be358ea8a52658a6f889753689ea51b9e5aa9951e68168a2509f2804639"
+    },
+    "firmware/inspection/utinspect/__main__.py": {
+      "bytes": 15636,
+      "sha256": "39e8dfde67c47e8892876fa881ce79c29f57dd7b1c50efc820a34855fecd217a"
+    },
+    "firmware/inspection/utinspect/basic_vision.py": {
+      "bytes": 14351,
+      "sha256": "a142225571a5a6b88897675d7703fc1893e7d0d942ade74ad55e33fd2c263e2e"
+    },
+    "firmware/inspection/utinspect/board_capture.py": {
+      "bytes": 3631,
+      "sha256": "c4cb376bc78c536a25ebb3a9c74363f683146539f5df1134dc8ae19426b655d4"
+    },
+    "firmware/inspection/utinspect/board_health.py": {
+      "bytes": 7412,
+      "sha256": "7a282a5a747fb884ba1f30bdbeaf5c60f6119b7bcf0d205a7da963c847ba320d"
+    },
+    "firmware/inspection/utinspect/camera.py": {
+      "bytes": 7250,
+      "sha256": "b206f3707728de3e17ff7b6eba3954dcbc7f5b8fad8f2caa9d22fd70f7aad4f4"
+    },
+    "firmware/inspection/utinspect/device_app.py": {
+      "bytes": 7499,
+      "sha256": "da4d1b70d874946c7b4579e05fe2908482c76f37ed3d3dcb30a7157bd5905130"
+    },
+    "firmware/inspection/utinspect/device_vision.py": {
+      "bytes": 4297,
+      "sha256": "eca31de2a4c6dbf2d5b3ff81ccbdf511e5e207e13242ea3290d04c5e6cf5eb91"
+    },
+    "firmware/inspection/utinspect/echo.py": {
+      "bytes": 10805,
+      "sha256": "29ba597913974629abe372d427d5463cd1fbb93f5f4d7a47051651a50dba85d7"
+    },
+    "firmware/inspection/utinspect/mapping.py": {
+      "bytes": 15884,
+      "sha256": "e985475cbea739f57cca55e432804933e83e3b45a61811902cd9971fe2bf4eec"
+    },
+    "firmware/inspection/utinspect/mapping_app.py": {
+      "bytes": 15197,
+      "sha256": "617da628b272e0c9728cde718189bbbf0e9920110af8082b1761680b685bebeb"
+    },
+    "firmware/inspection/utinspect/network.py": {
+      "bytes": 3553,
+      "sha256": "10645803c7169a0de10ec659289fca9b493e1b4ca6a2d6a383a8e1703c84c2e4"
+    },
+    "firmware/inspection/utinspect/records.py": {
+      "bytes": 652,
+      "sha256": "5ba2b5355f9b64434a54a4d55c01732f20d62a75a8fcf3b5bc0a2c7bcf925d96"
+    },
+    "firmware/inspection/utinspect/report.py": {
+      "bytes": 23782,
+      "sha256": "58d01a473c371327f4c31f622f73a73b01b6a3830273d676e0b128e143aa3339"
+    },
+    "firmware/inspection/utinspect/scan.py": {
+      "bytes": 20076,
+      "sha256": "0a29441899ecd90128955c95bb1cea5f71b06d92e24a7c3df877e39a329fc4f4"
+    },
+    "firmware/inspection/utinspect/vision.py": {
+      "bytes": 11505,
+      "sha256": "4ca3e446beb1342ce3a749ccf050d64114326c67107662ca20787061e91c6c40"
+    },
+    "firmware/inspection/utinspect/visual_selftest.py": {
+      "bytes": 3714,
+      "sha256": "4768afa28c0dc54024ec0bac4ac21ea4fb0a335b444b0e2ce6659d9450fa5afd"
+    },
+    "firmware/inspection/utinspect/workpiece.py": {
+      "bytes": 17915,
+      "sha256": "ac96cba8dd2335d7cdf56a215b0caf62ce9c7fc9fe9717a6a74d7c553ae530ed"
+    },
+    "firmware/inspection/utinspect/workpiece_app.py": {
+      "bytes": 24878,
+      "sha256": "9588e642be5758e1674dce191f68ad7fefbddeb0ba7775e5507838b841ade89f"
+    },
+    "firmware/inspection/utinspect/workpiece_config.py": {
+      "bytes": 2520,
+      "sha256": "28725d2e3af520eadd098ce9ff85bfaf027b8ae8a3b82ac3176cd61b2d3a3557"
+    },
+    "firmware/inspection/web/camera_basic.html": {
+      "bytes": 16043,
+      "sha256": "b1e04d0e55c7b30eaff276b08e1f2939153242579be0b9512d5b490d80a4049c"
+    },
+    "firmware/inspection/web/inspection.html": {
+      "bytes": 51612,
+      "sha256": "fd12059160cd4552a331b807396109ab7a2c981365d3859f99812cac1d169ca5"
+    },
+    "firmware/inspection/web/live_camera.html": {
+      "bytes": 12476,
+      "sha256": "c2cb1bab48b9de4a75759361a284e3d5348f172f6615df9bd88c2659c75db206"
+    },
+    "firmware/inspection/web/workpiece.html": {
+      "bytes": 32232,
+      "sha256": "6f42d6f35577c81f3e5064c0bf55fa0889c4d343411908850f05276df9dc76a2"
+    },
+    "firmware/inspection/workpiece_profile.example.json": {
+      "bytes": 518,
+      "sha256": "1b8faee54aefb4c85b1277eb1c71c0fcf720e7d9d905354293d4e27b03f507c0"
+    },
+    "firmware/lvgl_ui/Makefile.linux": {
+      "bytes": 1138,
+      "sha256": "8c7545a6fac7a799e453adf9822c8dcc6ee91e58892ee8ee050447299e0e7b35"
+    },
+    "firmware/lvgl_ui/assets/noto_license.txt": {
+      "bytes": 4301,
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+    },
+    "firmware/lvgl_ui/assets/ut_font.c": {
+      "bytes": 592205,
+      "sha256": "cd573ec6b394e78cf4ce3ae478463ef7404de24a70c571b2a5fe336ff18b01f0"
+    },
+    "firmware/lvgl_ui/assets/ut_font.h": {
+      "bytes": 155,
+      "sha256": "1fd32be1eb4e3096eb2a9b5572bb53cd142c175e426fd16dd0fed647e61ddbb9"
+    },
+    "firmware/lvgl_ui/assets/ut_palette.c": {
+      "bytes": 206209,
+      "sha256": "bf08a18992f671578be31c80b8f900aadf0f175da3097b5365fa6316889f3a76"
+    },
+    "firmware/lvgl_ui/assets/ut_palette.h": {
+      "bytes": 162,
+      "sha256": "7d787ec4f48007292f22eff77a9d216fe2d59fd5739c8b6d0df6314a4eb092e6"
+    },
+    "firmware/lvgl_ui/lv_conf.h": {
+      "bytes": 1304,
+      "sha256": "a0937e4ecac2e3cf120f6a42c2ad3a0674c9d52c774bc1b53c4e2568b6c7842e"
+    },
+    "firmware/lvgl_ui/ports/desktop_win32.c": {
+      "bytes": 16717,
+      "sha256": "bcb674b89d578ea7291a104fe52701c9062e219b70a99101b16397ccf05eefc9"
+    },
+    "firmware/lvgl_ui/ports/linux_main.c": {
+      "bytes": 9870,
+      "sha256": "0185799919b7903e7255dd0596a2df4542acb809b1c6e4ba5f7ad28e093e67bf"
+    },
+    "firmware/lvgl_ui/ports/linux_touch.c": {
+      "bytes": 6608,
+      "sha256": "d39021bd5b54c606bc910d78439305cda5252467f828b66001cd42a21b32fd84"
+    },
+    "firmware/lvgl_ui/ports/linux_touch.h": {
+      "bytes": 268,
+      "sha256": "692330fa39b552ec0a8da768a043ee3b664317765ead00c17706094ce38b01eb"
+    },
+    "firmware/lvgl_ui/ports/ut_linux_abi.h": {
+      "bytes": 761,
+      "sha256": "b703f52fbda879d0d5b44f66e703b71d0c2e8eb26efdcdccc5f0ed5379d81008"
+    },
+    "firmware/lvgl_ui/ports/ut_uvc_capture.c": {
+      "bytes": 12376,
+      "sha256": "a7192a5c81c163caba710b3daf4fc051f53d4f020adc4e3e1c8bd2361fbea391"
+    },
+    "firmware/lvgl_ui/ports/zynq_main.c": {
+      "bytes": 3863,
+      "sha256": "383a071646f37f0289d6c3567eb527bf17bcac5cf99cca1e0a810cf8f333b421"
+    },
+    "firmware/lvgl_ui/ports/zynq_rgb_main.c": {
+      "bytes": 12002,
+      "sha256": "65e857e196f1d66c44cf4794d963766fd93047e02463bf2a8e31b99a5df89a2e"
+    },
+    "firmware/lvgl_ui/ports/zynq_touch.c": {
+      "bytes": 4631,
+      "sha256": "6a6d19af437161e7d2256fe612618228eff737f240609336109cbab063711fa9"
+    },
+    "firmware/lvgl_ui/ports/zynq_touch.h": {
+      "bytes": 253,
+      "sha256": "3cc09838c46feedfc3cae9e1a50ea9902a512234c0c0ee4aba1836748184404b"
+    },
+    "firmware/lvgl_ui/src/ut_board_demo.c": {
+      "bytes": 2318,
+      "sha256": "8a0f2ed78b14a680444e4c0898a7c0e3f534bc0fef3f3f69344c3487bbc0a095"
+    },
+    "firmware/lvgl_ui/src/ut_board_demo.h": {
+      "bytes": 155,
+      "sha256": "becb9463b2c360a839810f670a93c1ff835be423f2947b264393476b84751b7b"
+    },
+    "firmware/lvgl_ui/src/ut_i2c.c": {
+      "bytes": 5749,
+      "sha256": "fd7c3f36e35d902b27d020037ea1c989d3ec1dd3bcea7d2857dfca0b2d2571d8"
+    },
+    "firmware/lvgl_ui/src/ut_i2c.h": {
+      "bytes": 853,
+      "sha256": "0499b6dc0a667eff1919aaeb8f51e86ff9e8bce9387badf215f34721e299138c"
+    },
+    "firmware/lvgl_ui/src/ut_map.c": {
+      "bytes": 7539,
+      "sha256": "5350780dcc2b59d4d0e1345456a135c959e99b78c43e1e71dac3964d99cfd7bf"
+    },
+    "firmware/lvgl_ui/src/ut_map.h": {
+      "bytes": 912,
+      "sha256": "7519f5b2f116ef9b00d102d61135b5cbc68b2c1192611e52ef741b38a33aa44b"
+    },
+    "firmware/lvgl_ui/src/ut_model.c": {
+      "bytes": 8720,
+      "sha256": "de74f4720982f995d0e21a37390ab1cf859464c566eccefedae10e4b9479c256"
+    },
+    "firmware/lvgl_ui/src/ut_model.h": {
+      "bytes": 1314,
+      "sha256": "28f3625810606ea9c00f822d282ce090ad3be2e2493b9542fc969c29eb590a83"
+    },
+    "firmware/lvgl_ui/src/ut_rgb.c": {
+      "bytes": 380,
+      "sha256": "3edc47e87b0685897f4ad539fec647bacf8157440de5b2fca3c6ed1cf345d811"
+    },
+    "firmware/lvgl_ui/src/ut_rgb.h": {
+      "bytes": 163,
+      "sha256": "03c85b5369d89c910d1e6f52ed191277d1d087b8aec87859173ecb052a775f1d"
+    },
+    "firmware/lvgl_ui/src/ut_scan.c": {
+      "bytes": 6626,
+      "sha256": "2f99a05813eaf3b863103e6c412152aab0025033ef7329e25426fca88e3cf8e3"
+    },
+    "firmware/lvgl_ui/src/ut_scan.h": {
+      "bytes": 890,
+      "sha256": "93921a709d1e2779511be99c884cb9e22adcaf362b2a5503a66e2939f10d340c"
+    },
+    "firmware/lvgl_ui/src/ut_touch.c": {
+      "bytes": 7465,
+      "sha256": "135011f94159618541d371cd6fddb2bb5bc6da496152d5ae5098bcff59f6687f"
+    },
+    "firmware/lvgl_ui/src/ut_touch.h": {
+      "bytes": 1759,
+      "sha256": "cc23434717b2af6d3b4c5b3e9edadd6b235b0ea060cce0042607390b606ecf31"
+    },
+    "firmware/lvgl_ui/src/ut_touch_input.c": {
+      "bytes": 870,
+      "sha256": "74fc93a70cdd20b611d6e8196088cdf459c49e26d4fd433f68de34bea4d0ae3f"
+    },
+    "firmware/lvgl_ui/src/ut_touch_input.h": {
+      "bytes": 333,
+      "sha256": "585061f24b5e8f500636b1a54f405888f71be79fdb7fa430bc3bca7e021e9e94"
+    },
+    "firmware/lvgl_ui/src/ut_ui.c": {
+      "bytes": 54265,
+      "sha256": "8f1c5597983858b313be35a0dc2f4bde6b978844ca5f38766b2b4a964cf71717"
+    },
+    "firmware/lvgl_ui/src/ut_ui.h": {
+      "bytes": 1281,
+      "sha256": "4f8e37333c5a454eabd1356a653970df0121f2e35dadcbb52a257c89604a3389"
+    },
+    "firmware/lvgl_ui/tests/mocks/zynq_touch/sleep.h": {
+      "bytes": 97,
+      "sha256": "02800d58272337668ea9d24801e4beb67b3c0a7da127fac1fd95106eb919ff65"
+    },
+    "firmware/lvgl_ui/tests/mocks/zynq_touch/xil_io.h": {
+      "bytes": 170,
+      "sha256": "6ba3c8a862eb08679474b1a943dd9d4bd789d70f8a1c4af9b0495c4c3f1d5e4a"
+    },
+    "firmware/lvgl_ui/tests/mocks/zynq_touch/xparameters.h": {
+      "bytes": 118,
+      "sha256": "b0b6e21a30d936220e92d9674780abb84751316a231f62eacc416b0a0b588fd4"
+    },
+    "firmware/lvgl_ui/tests/test_fonts.py": {
+      "bytes": 1035,
+      "sha256": "1888108b6eedf102a4d40d418eddac0f11cd4b9020d3ea657437536eaecf9ae2"
+    },
+    "firmware/lvgl_ui/tests/test_i2c.c": {
+      "bytes": 4548,
+      "sha256": "a5f49a37b5119ef1f3deb22e7d9dae449754e0b4c174505dc1caba49e7b27ac2"
+    },
+    "firmware/lvgl_ui/tests/test_linux_touch.c": {
+      "bytes": 4119,
+      "sha256": "24fc67302552efe3d83d1b9157033c59b7094fe06a06e631f9c3868afe2a9c7f"
+    },
+    "firmware/lvgl_ui/tests/test_map.c": {
+      "bytes": 2531,
+      "sha256": "fb0933e5da5d1eba982300eecdbfe2fa585a634963833e6b0ec9104694fca699"
+    },
+    "firmware/lvgl_ui/tests/test_model.c": {
+      "bytes": 2564,
+      "sha256": "508d902632e5a7a057abe1166e1213b71d24eb7e9ae7bc470d0b0e5c3470243f"
+    },
+    "firmware/lvgl_ui/tests/test_rgb.c": {
+      "bytes": 1219,
+      "sha256": "88a047a876cd4de350b50bfdf1211eed104dffc66de876a35ed2b90b1887ec62"
+    },
+    "firmware/lvgl_ui/tests/test_scan.c": {
+      "bytes": 3430,
+      "sha256": "816339c25d954f8948678942e26103d01c5984175e91a6ad994c060b363285ce"
+    },
+    "firmware/lvgl_ui/tests/test_touch.c": {
+      "bytes": 12248,
+      "sha256": "73ce779101052812ecd6d81c1e4d96d04343dd3ba28295a46d8b6b24971b7c21"
+    },
+    "firmware/lvgl_ui/tests/test_touch_mailbox.tcl": {
+      "bytes": 4426,
+      "sha256": "f7ac6801e51a496dc4a13820de78f7ea8e9024e16ea1c2b713c258cb09dafb6b"
+    },
+    "firmware/lvgl_ui/tests/test_touch_metadata.py": {
+      "bytes": 3730,
+      "sha256": "2cb073246f59b05571779c988b4fbb268ef123ac4ed7145fc8e74a042ce86226"
+    },
+    "firmware/lvgl_ui/tests/test_touch_tools.tcl": {
+      "bytes": 1978,
+      "sha256": "24aa7543203e3369993c659a987145dc355f2fbc60b15c7175a8eebb14f546e1"
+    },
+    "firmware/lvgl_ui/tests/test_touch_ui.c": {
+      "bytes": 6552,
+      "sha256": "c9a04225d1e4cd5ff2cb1f9f43d3b97fa7369c7aaf260f3f9741cce35120d11c"
+    },
+    "firmware/lvgl_ui/tests/test_ui.c": {
+      "bytes": 8689,
+      "sha256": "a9561bd6effb6eeaf61205aea20165a50831d931fb804d1a219f606b17cb9b75"
+    },
+    "firmware/lvgl_ui/tests/test_zynq_rgb_build.py": {
+      "bytes": 2870,
+      "sha256": "c8bcffe158757344afb90fbb1c33055f8d04ef899d03c7f08e9df60e3d1ea45b"
+    },
+    "firmware/lvgl_ui/tests/test_zynq_touch_build.py": {
+      "bytes": 4315,
+      "sha256": "2ada5736f9f96dd65957c0f91cfb758c796bf7c332f256037c554994c3854591"
+    },
+    "firmware/lvgl_ui/tests/test_zynq_touch_port.c": {
+      "bytes": 4558,
+      "sha256": "941a8378c7ca9ddeeb15874337c32383896ef379801ead55e334541361218380"
+    },
+    "firmware/lvgl_ui/tools/build_desktop.py": {
+      "bytes": 3784,
+      "sha256": "1f247e3e7817e52ac0712415fa79e38b9dcab46c7f6d5da278f41b8aea531a9f"
+    },
+    "firmware/lvgl_ui/tools/generate_fonts.py": {
+      "bytes": 3147,
+      "sha256": "82bfcb1dffc56b6fae762b4607f81e5285d186f9dfe397ae8df46c5f2b883496"
+    },
+    "firmware/lvgl_ui/tools/generate_palette.py": {
+      "bytes": 2269,
+      "sha256": "9b3542bfeafa10f406ba3c57814444360f7aa0fbfa3e4b3a4f6191ba31502273"
+    },
+    "firmware/lvgl_ui/tools/setup.py": {
+      "bytes": 2331,
+      "sha256": "b1f5517916306aa6633fcd55689c22ff3ddc358e1aa0191fdd752f4a7b3601ac"
+    },
+    "firmware/lvgl_ui/tools/test_desktop.py": {
+      "bytes": 1811,
+      "sha256": "8d24393396fabc8e830e0fbcc2b39a36871abeba62c3cb5454e984d084875015"
+    },
+    "firmware/lvgl_ui/tools/test_map_desktop.py": {
+      "bytes": 3597,
+      "sha256": "15249b23cdf3222ea0a7925022e371126908722e5d12d9ddd6a4ed718272f47f"
+    },
+    "firmware/lvgl_ui/tools/test_scan_desktop.py": {
+      "bytes": 4358,
+      "sha256": "2278e1010f4649388b0759d3e40b9b934a0afe3acce2342d6441a3202026ab69"
+    },
+    "firmware/lvgl_ui/tools/test_touch.py": {
+      "bytes": 1528,
+      "sha256": "5f870235516a9aad413b8f4b5b5e696294d07ec2382b155d5101700916eb5826"
+    },
+    "fpga/audit_md1213_touch_implementation.tcl": {
+      "bytes": 2458,
+      "sha256": "744372caa3ed9ff795eb162c7542aadb6b63d287a3334f3a8fb53f40ab986dc5"
+    },
+    "fpga/md1213_capture_axi.sv": {
+      "bytes": 16809,
+      "sha256": "d3ff9a658cd6e830c88fa686262a077561e9140c2afaecfa94fa85ca3307436f"
+    },
+    "fpga/md1213_capture_ip.v": {
+      "bytes": 5095,
+      "sha256": "d8e8d3d41b9beb52858374b175235ac801dbda37085b48202a6c1af9be25338e"
+    },
+    "fpga/md1213_lcd.xdc": {
+      "bytes": 4809,
+      "sha256": "15574a987cefb678249b1d20b05c1e885300beab8c1e258c3896bac358b7606c"
+    },
+    "fpga/md1213_linux_timing.xdc": {
+      "bytes": 1089,
+      "sha256": "cfcd132bf11ff9f21cbbe28e01232081a655760c40f0a46c88481eb8bd87fa8f"
+    },
+    "fpga/md1213_ps_touch_top.sv": {
+      "bytes": 3208,
+      "sha256": "189e44a9380428d0050ca5d0926f2a3e9cce83b432606315bf5cb287e484d6ba"
+    },
+    "fpga/md1213_touch.xdc": {
+      "bytes": 767,
+      "sha256": "cf1c4f5eb5abba346d8ea86b86fd22c5aaa3f217af589793c7601e3c32a11858"
+    },
+    "fpga/md1213_touch_io.sv": {
+      "bytes": 1170,
+      "sha256": "adfa25f1a0ce5a849e1350b4ddaa2886c8a2a3b5fb27219eb5143952b76bfb7c"
+    },
+    "fpga/md1213_tx_controller.sv": {
+      "bytes": 5064,
+      "sha256": "1555042cdaf8becacffae2cc07f24e8149a14aed7cce7eeb2a71e08eba0ad1a2"
+    },
+    "fpga/tb_md1213_capture_axi.sv": {
+      "bytes": 8606,
+      "sha256": "2d010991f0c7b3bb15f5a4d689d2148adb0617668d5c19ce96b4d31b2842f023"
+    },
+    "fpga/tb_md1213_touch_io.sv": {
+      "bytes": 2667,
+      "sha256": "8ca83ed1f824343c5d224547b882c19c731ad7998556a86d301dd28258e5f037"
+    },
+    "fpga/tb_md1213_tx_controller.sv": {
+      "bytes": 3980,
+      "sha256": "0edea912b9d2e58cf6728c6e3c440894d80827dfe5e1c86c61a06633407b8d4f"
+    },
+    "petalinux/board_acceptance.py": {
+      "bytes": 10711,
+      "sha256": "ef08015a723869bba5a01aa9c549e84f9bd6d2231a36c1569e0cc9123b2a0a6c"
+    },
+    "petalinux/linux/console.cfg": {
+      "bytes": 39,
+      "sha256": "dc2fce52578b42a52e76959e8ddda18f0fc1232b2b2e4537af12ae6da2975ff7"
+    },
+    "petalinux/linux/console.dtsi": {
+      "bytes": 1164,
+      "sha256": "7d418fda66c21cff0f9f1ecd2a228c8730992aef1d690a2deb6bc8d36261455b"
+    },
+    "petalinux/linux/jtag-smoke.cfg": {
+      "bytes": 159,
+      "sha256": "b94ce26ed5b621eb66f4b2b73d6ade3246c4307a012604fccbd38c7074aa45c0"
+    },
+    "petalinux/linux/jtag-smoke.dtsi": {
+      "bytes": 461,
+      "sha256": "9d5244960dcad421e40939e820bae4900d9868c3b887e05b279e90a786e125e4"
+    },
+    "petalinux/linux/jtag-uboot.cfg": {
+      "bytes": 450,
+      "sha256": "c0be566328fcd85025dff724b6af6086d722aaa0da0049a85f7ee89110d22f3b"
+    },
+    "petalinux/linux/network-system-user.dtsi": {
+      "bytes": 361,
+      "sha256": "2f66edba3328a342ad7bcff44fe20f15ff8a94c8604074f3f6003f47344bba1d"
+    },
+    "petalinux/linux/network.cfg": {
+      "bytes": 285,
+      "sha256": "8c7d43c0fd0080e63492a8381e738f8ebce175f44440bb4e69eef7c420c71efe"
+    },
+    "petalinux/linux/uvc.cfg": {
+      "bytes": 572,
+      "sha256": "d4f8c0d32ce2cb04418761b3cfa67ff802c382852caa663683186c6154860a39"
+    },
+    "petalinux/package_board_service.py": {
+      "bytes": 2910,
+      "sha256": "2dbaeab0f1e6c1529530c858a02ce1548fc0ced2d135dac0a7fb76a742479353"
+    },
+    "petalinux/recipes/busybox/busybox_%.bbappend": {
+      "bytes": 96,
+      "sha256": "24c9dfaf7b20bd37622dd6b1aaca18225271555d33858215dd24180e2bc2a788"
+    },
+    "petalinux/recipes/busybox/files/utinspect-runtime.cfg": {
+      "bytes": 17,
+      "sha256": "d7e96958438719bfc74083fb3b0e08d3fc59fd70a04bbf9f769904061f10b1a3"
+    },
+    "petalinux/recipes/utinspect-jtag-smoke/files/utinspect-jtag-smoke.init": {
+      "bytes": 1507,
+      "sha256": "5884081c48def2d38db490efd2d926c104d6c591175e0cee089c50db4d731a24"
+    },
+    "petalinux/recipes/utinspect-jtag-smoke/utinspect-jtag-smoke_0.1.bb": {
+      "bytes": 759,
+      "sha256": "06e13f5b00ca6afbf958990e603c47ee8962f0bf4e897ef6d52240ca8d81c5cb"
+    },
+    "petalinux/recipes/utinspect-lvgl/files/utinspect-lvgl.init": {
+      "bytes": 3089,
+      "sha256": "857b4c13892acc2a52c7d33e729b5fd55f17dba46e45dfde669736c5d830bd38"
+    },
+    "petalinux/recipes/utinspect-lvgl/utinspect-lvgl_0.1.bb": {
+      "bytes": 1239,
+      "sha256": "b2f487b8995d45532e8236b01ac1b2e22e9e89dc3d596af64ee479309edbc8e0"
+    },
+    "petalinux/recipes/utinspect/files/utinspect-launch": {
+      "bytes": 680,
+      "sha256": "fa9df23e7ec22b01f6a12f503997ca1e008ff3ab3793aa19f231c8d81bb38741"
+    },
+    "petalinux/recipes/utinspect/files/utinspect.conf": {
+      "bytes": 218,
+      "sha256": "179eab204c173a20cef0cbc0bca82098096dab1dd4f99d0e214cfbe29debf75a"
+    },
+    "petalinux/recipes/utinspect/files/utinspect.init": {
+      "bytes": 1613,
+      "sha256": "a0a991d5f2bcff8e005e67c80bc89720815de6018c482b63e9eff24011ba2bf2"
+    },
+    "petalinux/recipes/utinspect/utinspect_0.1.bb": {
+      "bytes": 1432,
+      "sha256": "928134b25cad30872964b897c2dd35fcc130d55fd00a6fe5118dd72d62df0791"
+    }
+  },
+  "source_license": "MIT",
+  "repository": "Caly0807/zynq-ultrasonic-inspection",
+  "excluded_components": [
+    "ut_platform kernel driver and ut-platform recipe: licensing metadata requires separate review"
+  ]
+}

@@ -1,0 +1,27 @@
+/ {
+    reserved-memory {
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
+
+        ramoops@3fe00000 {
+            compatible = "ramoops";
+            reg = <0x3fe00000 0x00200000>;
+            record-size = <0x00100000>;
+            console-size = <0x00080000>;
+            pmsg-size = <0x00080000>;
+        };
+    };
+};
+
+&sdhci0 {
+    status = "disabled";
+};
+
+&sdhci1 {
+    status = "disabled";
+};
+
+&qspi {
+    status = "disabled";
+};

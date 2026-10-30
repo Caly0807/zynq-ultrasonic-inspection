@@ -1,0 +1,9 @@
+Noto CJK derived bitmap font notice
+
+Source: NotoSansSC-Regular.otf, used to generate firmware/lvgl_ui/assets/ut_font.c.
+Copyright notice extracted from the source font name table:
+© 2014-2021 Adobe (http://www.adobe.com/).
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+Full license: firmware/lvgl_ui/assets/noto_license.txt.
+The generated bitmap font is not relicensed under the project MIT license.
