@@ -21,9 +21,9 @@ class NativeCameraTests(unittest.TestCase):
         cls.helper = cls.root / "ut_uvc_capture"
         cls.fixture = cls.root / "uvc_fixture.so"
         subprocess.run(["gcc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
-                        str(ROOT / "firmware/lvgl_ui/ports/ut_uvc_capture.c"), "-o", str(cls.helper)], check=True, capture_output=True)
+                        str(ROOT / "firmware/lvgl_ui/ports/ut_uvc_capture.c"), "-o", str(cls.helper)], check=True)
         subprocess.run(["gcc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", "-shared", "-fPIC",
-                        str(Path(__file__).parent / "native/uvc_fixture.c"), "-ldl", "-o", str(cls.fixture)], check=True, capture_output=True)
+                        str(Path(__file__).parent / "native/uvc_fixture.c"), "-ldl", "-o", str(cls.fixture)], check=True)
 
     @classmethod
     def tearDownClass(cls):

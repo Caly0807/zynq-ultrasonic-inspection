@@ -21,7 +21,7 @@ class WorkpieceWebTests(unittest.TestCase):
         identifiers = re.findall(r'\bid="([^"]+)"', html)
         self.assertEqual(len(identifiers), len(set(identifiers)))
         source = re.search(r"<script>(.*?)</script>", html, re.S).group(1)
-        result = subprocess.run([shutil.which("node"), "--check"], input=source, capture_output=True, text=True, timeout=10)
+        result = subprocess.run([shutil.which("node"), "--check"], input=source, capture_output=True, text=True, encoding="utf-8", timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_letterbox_click_mapping_and_state_rendering_without_a_browser_or_camera(self):

@@ -191,7 +191,7 @@ class LocalDisplayBridgeTests(unittest.TestCase):
 
     def test_failed_lcd_copy_does_not_undo_authoritative_measurement(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             session = MapSession(root / "session", mode="DEMO")
             session.bind_local_display(root / "lcd")
             replace = Path.replace

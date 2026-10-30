@@ -2,6 +2,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <time.h>
 #include <linux/videodev2.h>
 #include <poll.h>
 #include <signal.h>

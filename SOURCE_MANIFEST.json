@@ -20,8 +20,8 @@
   ],
   "files": {
     ".github/workflows/source-tests.yml": {
-      "bytes": 1164,
-      "sha256": "3f2476f3a0730a99590fc9051635ad83f62c8aeb865e05c737a5292e1332d0f4"
+      "bytes": 1186,
+      "sha256": "9b99de76e96af4be7e20de48ce5832d65a595e21ade103fbc91a63f7becf18bb"
     },
     "LICENSE": {
       "bytes": 1096,
@@ -84,8 +84,8 @@
       "sha256": "eb643169bce257dc8f80447681d878b01500c6a743ad3e4f0aca1cbc39f0f26d"
     },
     "firmware/inspection/tests/native/uvc_fixture.c": {
-      "bytes": 3236,
-      "sha256": "d56622bf979d0d984f9a35edd38066179ad98bdf21c66b086a65157489033f59"
+      "bytes": 3254,
+      "sha256": "ed90d10ff83ea99d1c39fcf738e30a2204744e346294c182440f16e66c86b0ea"
     },
     "firmware/inspection/tests/test_basic_vision.py": {
       "bytes": 16207,
@@ -124,8 +124,8 @@
       "sha256": "e717a7acb4c55515490963a9615b3b68951b60d2355d119748ad629b2ccc8cae"
     },
     "firmware/inspection/tests/test_linux_console.py": {
-      "bytes": 11719,
-      "sha256": "3a65d9bfd1b4b325f0ee2a1f1a7d11f70fe9dd51ffd8d355e45453ead803436a"
+      "bytes": 11729,
+      "sha256": "e82822928c4e3ac9d49a6304e7503dbb8293abd80fd28a26c4a541c4d6b9332d"
     },
     "firmware/inspection/tests/test_mapping.py": {
       "bytes": 8845,
@@ -152,8 +152,8 @@
       "sha256": "c4c85de85c458085968ff9e13754ce783564fe3257fbf7568b799cd94d67b11e"
     },
     "firmware/inspection/tests/test_uvc_capture.py": {
-      "bytes": 4255,
-      "sha256": "6ab679e553b9882b5555a5479459c177efbf87a01edf2679761caa780d8e549d"
+      "bytes": 4213,
+      "sha256": "152fd6145e64a4734ee0583d1f147f99d291e27d9a34c86d2a0411673e93e993"
     },
     "firmware/inspection/tests/test_vision_scan.py": {
       "bytes": 10137,
@@ -168,8 +168,8 @@
       "sha256": "672f64392d5c5088634f74e9b7fb35fe5e7c8259df2bbd097648fdbef29d037f"
     },
     "firmware/inspection/tests/test_workpiece_web.py": {
-      "bytes": 6926,
-      "sha256": "11ef389f03d446bca78fb33ba4c99ee9be5e414f93945355ef1b39080e609e95"
+      "bytes": 6944,
+      "sha256": "96fadab93aee5dbda6294eda994e9fe9bedd34930a5bb277ae774a04a473d361"
     },
     "firmware/inspection/utinspect/__init__.py": {
       "bytes": 111,
