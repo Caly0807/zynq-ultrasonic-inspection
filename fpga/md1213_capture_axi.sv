@@ -2,7 +2,9 @@
 
 module md1213_capture_axi #(
     parameter longint unsigned CLK_HZ = 50_000_000,
-    parameter int unsigned MIN_TRIGGER_INTERVAL_US = 10_000
+    parameter int unsigned MIN_TRIGGER_INTERVAL_US = 10_000,
+    parameter bit LIVE_GUARD = 1'b0,
+    parameter int unsigned TX_LEASE_US = 250_000
 ) (
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 aclk CLK",
        X_INTERFACE_PARAMETER = "XIL_INTERFACENAME aclk, ASSOCIATED_BUSIF S_AXI:M_AXIS, ASSOCIATED_RESET aresetn, FREQ_HZ 50000000" *)
@@ -80,13 +82,16 @@ module md1213_capture_axi #(
     logic [3:0] write_strobe;
     logic [31:0] read_value;
     logic read_valid_address;
-    logic enable_tx, test_mode, irq_enable, done_flag, rejected_flag;
+    localparam longint unsigned TX_LEASE_CYCLES = (CLK_HZ * TX_LEASE_US) / 1_000_000;
+    logic enable_tx, test_mode, passive_mode, irq_enable, done_flag, rejected_flag;
+    logic [31:0] lease_remaining;
+    logic lease_expired;
     logic otr_flag, gate_hit, video_underflow_flag;
     logic fire_request, fire_ready, fire_ack;
     logic [31:0] frame_sequence;
     logic [11:0] sample_index, gate_start, gate_end, frame_gate_start, frame_gate_end;
     logic [7:0] threshold, baseline, frame_threshold, frame_baseline;
-    logic frame_test;
+    logic frame_test, frame_passive;
     logic [7:0] minimum, maximum, peak, gate_peak;
     logic [11:0] peak_index, gate_peak_index;
     logic [9:0] word_index;
@@ -107,6 +112,9 @@ module md1213_capture_axi #(
     wire control_write = write_commit && write_address == 12'h004 && write_strobe[0];
     wire start_command = control_write && write_data[1];
     wire clear_command = control_write && write_data[2];
+    wire lease_active = LIVE_GUARD && lease_remaining != 0;
+    wire transmit_allowed = enable_tx && (!LIVE_GUARD || lease_active);
+    wire passive_command = LIVE_GUARD && write_data[5];
 
     assign s_axi_awready = !aw_pending && !s_axi_bvalid;
     assign s_axi_wready = !w_pending && !s_axi_bvalid;
@@ -120,7 +128,7 @@ module md1213_capture_axi #(
         .CLK_HZ(CLK_HZ), .PULSE_WIDTH_NS(100), .OE_SETTLE_US(1),
         .MIN_TRIGGER_INTERVAL_US(MIN_TRIGGER_INTERVAL_US)
     ) transmitter (
-        .clk(aclk), .reset_n(aresetn), .oe_enable_async(enable_tx),
+        .clk(aclk), .reset_n(aresetn), .oe_enable_async(transmit_allowed),
         .fire_req_async(fire_request), .oe_out(md1213_oe), .ina_out(md1213_ina),
         .fire_ready(fire_ready), .busy(), .fire_ack(fire_ack)
     );
@@ -180,9 +188,10 @@ module md1213_capture_axi #(
     always_comb begin
         read_valid_address = 1'b1;
         case (s_axi_araddr)
-            12'h000: read_value = 32'h4d443131;
-            12'h004: read_value = {27'd0, test_mode, 3'd0, enable_tx};
-            12'h008: read_value = {21'd0, video_underflow_flag, locked_sync, frame_test,
+            12'h000: read_value = LIVE_GUARD ? 32'h4d443132 : 32'h4d443131;
+            12'h004: read_value = {26'd0, passive_mode, test_mode, 3'd0, enable_tx};
+            12'h008: read_value = {18'd0, lease_expired, lease_active, frame_passive,
+                video_underflow_flag, locked_sync, frame_test,
                 md1213_ina, md1213_oe, gate_hit, otr_flag, rejected_flag, done_flag,
                 (fire_ready && state == IDLE), (state != IDLE)};
             12'h00c: read_value = 32'd4096;
@@ -205,6 +214,9 @@ module md1213_capture_axi #(
             12'h050: read_value = 32'd4096;
             12'h054: read_value = 32'd100;
             12'h058: read_value = MIN_TRIGGER_INTERVAL_US;
+            12'h05c: read_value = LIVE_GUARD ? 32'h554c5632 : 32'd0;
+            12'h060: read_value = lease_remaining;
+            12'h064: read_value = LIVE_GUARD ? TX_LEASE_US : 32'd0;
             default: begin read_value = '0; read_valid_address = 1'b0; end
         endcase
     end
@@ -223,6 +235,9 @@ module md1213_capture_axi #(
             s_axi_rresp <= 2'b00;
             enable_tx <= 1'b0;
             test_mode <= 1'b0;
+            passive_mode <= 1'b0;
+            lease_remaining <= '0;
+            lease_expired <= 1'b0;
             gain_code <= 8'd0;
             irq_enable <= 1'b0;
             gate_start <= 12'd200;
@@ -230,6 +245,13 @@ module md1213_capture_axi #(
             threshold <= 8'd32;
             baseline <= 8'd128;
         end else begin
+            if (lease_remaining != 0) begin
+                lease_remaining <= lease_remaining - 1'b1;
+                if (lease_remaining == 1) begin
+                    enable_tx <= 1'b0;
+                    lease_expired <= 1'b1;
+                end
+            end
             if (s_axi_awvalid && s_axi_awready) begin
                 write_address <= s_axi_awaddr;
                 aw_pending <= 1'b1;
@@ -247,8 +269,10 @@ module md1213_capture_axi #(
                 s_axi_bresp <= 2'b00;
                 case (write_address)
                     12'h004: if (write_strobe[0]) begin
-                        enable_tx <= write_data[0] && !write_data[4];
+                        enable_tx <= write_data[0] && !write_data[4] && !passive_command &&
+                            (!LIVE_GUARD || lease_remaining > 1);
                         test_mode <= write_data[4];
+                        passive_mode <= passive_command;
                     end
                     12'h010: if (write_strobe[0]) begin
                         if (write_data[7:0] <= 8'he0 && state == IDLE)
@@ -266,6 +290,15 @@ module md1213_capture_axi #(
                     end
                     12'h03c: if (write_strobe[0]) threshold <= write_data[7:0];
                     12'h040: if (write_strobe[0]) baseline <= write_data[7:0];
+                    12'h060: begin
+                        if (LIVE_GUARD && write_strobe == 4'hf && write_data == 32'h554c5632 && state == IDLE) begin
+                            lease_remaining <= TX_LEASE_CYCLES;
+                            lease_expired <= 1'b0;
+                        end else if (LIVE_GUARD && write_strobe == 4'hf && write_data == 0) begin
+                            lease_remaining <= '0;
+                            enable_tx <= 1'b0;
+                        end else s_axi_bresp <= 2'b10;
+                    end
                     default: s_axi_bresp <= 2'b10;
                 endcase
             end
@@ -296,6 +329,7 @@ module md1213_capture_axi #(
             frame_threshold <= '0;
             frame_baseline <= '0;
             frame_test <= 1'b0;
+            frame_passive <= 1'b0;
             minimum <= 8'hff;
             maximum <= '0;
             peak <= '0;
@@ -313,7 +347,7 @@ module md1213_capture_axi #(
             case (state)
                 IDLE: begin end
                 WAIT_FIRE: begin
-                    if (!enable_tx) begin
+                    if (!transmit_allowed) begin
                         state <= IDLE;
                         rejected_flag <= 1'b1;
                     end else if (fire_ack) state <= CAPTURE;
@@ -356,11 +390,14 @@ module md1213_capture_axi #(
                 default: state <= IDLE;
             endcase
             if (start_command) begin
-                if (state == IDLE && (write_data[4] || (write_data[0] && fire_ready)) &&
+                if (state == IDLE && !(write_data[4] && passive_command) &&
+                    (write_data[4] || passive_command || (write_data[0] && fire_ready &&
+                    (!LIVE_GUARD || lease_remaining > 1))) &&
                     gate_start <= gate_end) begin
-                    state <= write_data[4] ? CAPTURE : WAIT_FIRE;
-                    fire_request <= !write_data[4];
+                    state <= (write_data[4] || passive_command) ? CAPTURE : WAIT_FIRE;
+                    fire_request <= !write_data[4] && !passive_command;
                     frame_test <= write_data[4];
+                    frame_passive <= passive_command;
                     frame_gate_start <= gate_start;
                     frame_gate_end <= gate_end;
                     frame_threshold <= threshold;

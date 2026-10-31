@@ -15,6 +15,7 @@
 #include "ut_board_demo.h"
 #include "ut_rgb.h"
 #include "linux_touch.h"
+#include "linux_live.h"
 
 static volatile sig_atomic_t running = 1;
 static uint8_t *pixels;
@@ -28,6 +29,49 @@ static uint64_t flushes;
 static bool allow_demo;
 static struct stat waveform_stamp, map_stamp;
 static bool waveform_seen, map_seen;
+static const char *live_directory;
+static char live_owner[37];
+static bool live_requested;
+static uint64_t confirmation_deadline, last_keepalive;
+
+static uint64_t monotonic_ns(void)
+{
+    struct timespec current;
+    clock_gettime(CLOCK_MONOTONIC, &current);
+    return (uint64_t)current.tv_sec * 1000000000ULL + (uint64_t)current.tv_nsec;
+}
+
+static void live_stop(void)
+{
+    if (live_directory)
+        ut_linux_live_command(live_directory, "stop", live_owner, 128, monotonic_ns());
+    live_requested = false;
+    confirmation_deadline = 0;
+    ut_ui_set_live_controls(false);
+}
+
+static void reload_live(void)
+{
+    if (!live_directory) return;
+    uint64_t now = monotonic_ns();
+    if (live_requested && ut_ui_is_paused()) live_stop();
+    if (live_requested && now - last_keepalive >= 250000000ULL) {
+        if (!ut_linux_live_command(live_directory, "keepalive", live_owner, 128, now)) {
+            live_stop();
+            ut_ui_notify("Live keepalive failed / capture stopped");
+        }
+        last_keepalive = now;
+    }
+    ut_frame_t incoming;
+    if (ut_linux_live_read(live_directory, now, &incoming)) {
+        frame = incoming;
+        ut_ui_update(&frame);
+    } else if (frame.source == UT_SOURCE_LIVE) {
+        memset(&frame, 0, sizeof(frame));
+        frame.source = UT_SOURCE_WAITING;
+        ut_ui_update(&frame);
+    }
+}
 
 static bool changed(const char *path, const struct stat *previous, bool seen, struct stat *current)
 {
@@ -116,7 +160,24 @@ static void reload_files(void)
 
 static void handle_action(ut_action_t action)
 {
-    if (action == UT_ACTION_DEMO && allow_demo) {
+    if (action == UT_ACTION_LIVE_TOGGLE && live_directory) {
+        uint64_t now = monotonic_ns();
+        if (live_requested) {
+            live_stop();
+            ut_ui_notify("Capture stop requested / no automatic restart");
+        } else if (!confirmation_deadline || now > confirmation_deadline) {
+            confirmation_deadline = now + 5000000000ULL;
+            ut_ui_notify("Probe coupled and safe to pulse? Press LIVE again within 5 seconds.");
+        } else if (ut_ui_is_paused()) {
+            ut_ui_notify("Resume the display before explicitly starting live capture");
+        } else if (ut_linux_live_command(live_directory, "start", live_owner, 128, now)) {
+            live_requested = true;
+            confirmation_deadline = 0;
+            last_keepalive = now;
+            ut_ui_set_live_controls(true);
+            ut_ui_notify("Guarded real ADC requested / STOP or pause ends acquisition");
+        } else ut_ui_notify("Live request failed / no trigger requested");
+    } else if (action == UT_ACTION_DEMO && allow_demo) {
         ut_generate_demo(&frame, milliseconds() / 250U, true);
         strcpy(frame.source_name, "Linux / synthetic DEMO / HV OFF");
         ut_ui_update(&frame);
@@ -129,7 +190,7 @@ static void handle_action(ut_action_t action)
         ut_ui_update(&frame);
     } else if (action == UT_ACTION_EXPORT) {
         ut_ui_notify("Export the complete report from the PC dashboard");
-    } else if (action >= UT_ACTION_TOUCH_RETRY) {
+    } else if (action >= UT_ACTION_TOUCH_RETRY && action <= UT_ACTION_TOUCH_RESET) {
         ut_linux_touch_action(action);
     }
 }
@@ -162,6 +223,7 @@ int main(int argument_count, char **arguments)
         else if (!strcmp(option, "--map")) map_path = value;
         else if (!strcmp(option, "--touch-i2c")) touch_path = value;
         else if (!strcmp(option, "--status")) status_path = value;
+        else if (!strcmp(option, "--live-directory")) live_directory = value;
         else if (!strcmp(option, "--view")) view = value;
         else if (!strcmp(option, "--frames")) {
             char *end;
@@ -172,6 +234,10 @@ int main(int argument_count, char **arguments)
         } else { fprintf(stderr, "Unknown option: %s\n", option); return 2; }
     }
     if (strcmp(view, "waveform") && strcmp(view, "map") && strcmp(view, "3d")) return 2;
+    if (live_directory && (headless_output || allow_demo)) {
+        fprintf(stderr, "Live input cannot be combined with headless or synthetic DEMO\n");
+        return 2;
+    }
     if (headless_output) {
         if (!frames) frames = 40;
         pixels = calloc(1, UT_LCD_BYTES);
@@ -186,6 +252,27 @@ int main(int argument_count, char **arguments)
         }
         pixels = mmap(NULL, UT_LCD_BYTES, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0);
         if (pixels == MAP_FAILED) { pixels = NULL; goto cleanup; }
+        if (live_directory) {
+            struct ut_live_caps caps;
+            if (ioctl(descriptor, UT_LIVE_CAPS, &caps) || caps.magic != UT_LIVE_CAPS_MAGIC ||
+                caps.version != 2 || caps.modes != 0xe || caps.samples != 4096 || caps.sample_period_ns != 40 ||
+                caps.max_gain != 224 || caps.lease_us != 250000 || caps.reserved != 0) {
+                fprintf(stderr, "Live LCD requires the guarded v2 driver and hardware\n");
+                goto cleanup;
+            }
+            FILE *identifier = fopen("/proc/sys/kernel/random/uuid", "r");
+            char raw_identifier[64];
+            if (!identifier) goto cleanup;
+            bool identified = fgets(raw_identifier, sizeof(raw_identifier), identifier) != NULL;
+            fclose(identifier);
+            if (!identified) goto cleanup;
+            strcpy(live_owner, "lcd-");
+            size_t position = 4;
+            for (size_t index = 0; raw_identifier[index] && position < 36; index++)
+                if (strchr("0123456789abcdef", raw_identifier[index])) live_owner[position++] = raw_identifier[index];
+            live_owner[position] = '\0';
+            if (position != 36) goto cleanup;
+        }
         memset(pixels, 0, UT_LCD_BYTES);
         if (ioctl(descriptor, UT_DISPLAY_START)) { perror("LCD start"); goto cleanup; }
     }
@@ -201,6 +288,7 @@ int main(int argument_count, char **arguments)
     lv_display_set_buffers(display, draw_buffer, NULL, sizeof(draw_buffer), LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(display, flush_display);
     ut_ui_create(handle_action);
+    if (live_directory) ut_ui_set_live_controls(false);
     if (touch_path && !headless_output)
         printf("UT_LINUX_TOUCH identified=%u; physical acceptance still required\n", ut_linux_touch_open(touch_path));
     if (allow_demo) {
@@ -216,18 +304,20 @@ int main(int argument_count, char **arguments)
         ut_ui_show_map(true);
         ut_ui_set_map_3d(!strcmp(view, "3d"));
     }
-    printf("UT_LINUX_LVGL source=%s transport=%s no_HV_or_motion\n", allow_demo ? "DEMO" : "WAITING", headless_output ? "HEADLESS_TEST" : "PL_LCD");
+    printf("UT_LINUX_LVGL source=%s transport=%s guarded_live=%u auto_TX=0 motion=0\n", allow_demo ? "DEMO" : "WAITING", headless_output ? "HEADLESS_TEST" : "PL_LCD", live_directory != NULL);
     fflush(stdout);
     unsigned iterations = 0;
     while (running && (!frames || iterations < frames)) {
         lv_timer_handler();
         if (iterations % 25U == 0) reload_files();
+        if (iterations % 5U == 0) reload_live();
         if (iterations % 50U == 0) publish_runtime_status(headless_output != NULL);
         struct timespec delay = {0, 10000000L};
         nanosleep(&delay, NULL);
         iterations++;
     }
     result = headless_output && !save_ppm(headless_output) ? 1 : 0;
+    if (live_directory && live_requested) live_stop();
     ut_linux_touch_close();
     lv_deinit();
 cleanup:

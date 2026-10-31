@@ -40,4 +40,5 @@ bool ut_touch_transform(const ut_touch_transform_t *transform, uint16_t raw_x, u
 ut_touch_result_t ut_touch_probe(ut_touch_t *touch, const ut_touch_bus_t *bus, uint16_t screen_width, uint16_t screen_height);
 ut_touch_result_t ut_touch_poll(ut_touch_t *touch, uint32_t now_ms);
 void ut_touch_release(ut_touch_t *touch);
+void ut_touch_reset_board_orientation(ut_touch_t *touch);
 #endif

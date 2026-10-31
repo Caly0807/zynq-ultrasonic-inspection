@@ -12,19 +12,21 @@ CORE_MODULES = ("__init__", "records", "echo", "scan", "mapping", "mapping_app",
 VISION_MODULES = ("camera", "vision", "workpiece", "workpiece_config", "workpiece_app", "device_vision")
 
 
-def build_bundle(destination, with_vision=False):
+def build_bundle(destination, with_vision=False, with_live=False):
     source_root = ROOT / "firmware/inspection"
     relative_paths = [f"utinspect/{name}.py" for name in CORE_MODULES + (VISION_MODULES if with_vision else ())]
     relative_paths += ["web/inspection.html", "web/camera_basic.html"] + (["web/workpiece.html"] if with_vision else [])
+    if with_live:
+        relative_paths += ["utinspect/live_capture.py", "utinspect/live_service.py", "utinspect/live_result.py", "web/realtime.html"]
     content = {relative: (source_root / relative).read_bytes() for relative in sorted(relative_paths)}
-    content["LICENSE"] = (ROOT / "LICENSE").read_bytes()
     manifest = {
         "schema": "ut-board-bundle/1", "with_vision": with_vision,
         "requires_python": ">=3.10", "core_dependencies": "stdlib only",
         "optional_vision_dependencies": ["numpy", "opencv with ArUco"] if with_vision else [],
-        "default_source": "RECORDED", "hardware_control": False,
+        "default_source": "RECORDED", "hardware_control": with_live,
         "board_execution_verified": False,
-        "diagnostic_dma_transport": "EXPLICIT_TEST_ONLY_NO_TRANSMIT_ABI",
+        "diagnostic_dma_transport": "EXPLICIT_GUARDED_SINGLE_SHOT_V2" if with_live else "EXPLICIT_TEST_ONLY_NO_TRANSMIT_ABI",
+        "with_live": with_live, "automatic_transmit_on_boot": False,
         "basic_vision": "STDLIB_FOUR_CORNER_AND_RED_MARKER_WITH_NATIVE_YUYV_HELPER",
         "files": {name: {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)} for name, data in content.items()},
     }
@@ -47,8 +49,9 @@ def main():
     parser = argparse.ArgumentParser(description="Deterministic board-service bundle; excludes PC environments, data and credentials")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--with-vision", action="store_true")
+    parser.add_argument("--with-live", action="store_true")
     arguments = parser.parse_args()
-    report = build_bundle(arguments.out, arguments.with_vision)
+    report = build_bundle(arguments.out, arguments.with_vision, arguments.with_live)
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

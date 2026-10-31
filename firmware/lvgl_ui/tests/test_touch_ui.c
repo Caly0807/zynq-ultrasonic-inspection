@@ -9,7 +9,7 @@ static uint32_t ticks, draw_buffer[800U * 32U];
 static ut_touch_t touch;
 static ut_touch_input_t contact;
 static lv_indev_t *pointer;
-static bool fail_reads, not_ready;
+static bool fail_reads, not_ready, focaltech;
 static uint8_t fingers;
 static uint16_t raw_x, raw_y;
 static unsigned action_count;
@@ -18,7 +18,23 @@ static uint32_t now_ms(void) { return ticks; }
 static bool read_register(void *context, uint8_t address, uint16_t register_address, unsigned register_bytes, uint8_t *data, size_t length)
 {
     (void)context;
-    if (fail_reads || address != 0x5dU || register_bytes != 2U) return false;
+    if (fail_reads) return false;
+    if (focaltech) {
+        if (address != 0x38U || register_bytes != 1U) return false;
+        memset(data, 0, length);
+        if (register_address == 0xa1U && length == 2U) { data[1] = 1U; return true; }
+        if (register_address == 0xa3U && length == 1U) { data[0] = 0x54U; return true; }
+        if (register_address != 0U) return false;
+        if (length == 1U) return true;
+        if (length != 7U) return false;
+        data[2] = fingers;
+        data[3] = (uint8_t)((fingers ? 0x80U : 0x40U) | (raw_x >> 8));
+        data[4] = (uint8_t)raw_x;
+        data[5] = (uint8_t)(raw_y >> 8);
+        data[6] = (uint8_t)raw_y;
+        return true;
+    }
+    if (address != 0x5dU || register_bytes != 2U) return false;
     memset(data, 0, length);
     if (register_address == 0x8140U && length == 10U) {
         memcpy(data, "911", 4U);
@@ -57,14 +73,22 @@ static void pump(unsigned count)
 }
 static void position(unsigned screen_x, unsigned screen_y)
 {
-    assert(!touch.transform.swap_xy);
-    raw_x = (uint16_t)(touch.transform.invert_x ? 799U - screen_x : screen_x);
-    raw_y = (uint16_t)(touch.transform.invert_y ? 479U - screen_y : screen_y);
+    uint16_t mapped_x = (uint16_t)(touch.transform.invert_x ? 799U - screen_x : screen_x);
+    uint16_t mapped_y = (uint16_t)(touch.transform.invert_y ? 479U - screen_y : screen_y);
+    raw_x = touch.transform.swap_xy ? mapped_y : mapped_x;
+    raw_y = touch.transform.swap_xy ? mapped_x : mapped_y;
 }
 static void click(unsigned screen_x, unsigned screen_y)
 {
     position(screen_x, screen_y);
     fingers = 1U; pump(2U);
+    fingers = 0U; pump(2U);
+}
+static void drag(unsigned start_x, unsigned start_y, unsigned end_x, unsigned end_y)
+{
+    position(start_x, start_y);
+    fingers = 1U; pump(2U);
+    position(end_x, end_y); pump(2U);
     fingers = 0U; pump(2U);
 }
 static lv_obj_t *find_label(lv_obj_t *parent, const char *caption)
@@ -134,6 +158,13 @@ int main(void)
     assert(lv_obj_get_child_count(lv_screen_active()) == child_count);
     click(200U, 87U);
     assert(lv_obj_get_child_count(lv_screen_active()) == child_count + 1U);
+    drag(260U, 203U, 530U, 203U);
+    assert(ut_ui_settings()->threshold_percent > 60.0f);
+    drag(260U, 281U, 530U, 281U);
+    assert(ut_ui_settings()->sound_speed_mps > 6000.0f);
+    bool previous_auto_scale = ut_ui_settings()->auto_scale;
+    click(270U, 332U);
+    assert(ut_ui_settings()->auto_scale != previous_auto_scale);
     click(608U, 105U);
     assert(lv_obj_get_child_count(lv_screen_active()) == child_count);
     position(300U, 87U); fingers = 1U; pump(2U);
@@ -151,7 +182,28 @@ int main(void)
     assert(find_label(lv_screen_active(), "Persistent test notice"));
     pump(192U);
     assert(!find_label(lv_screen_active(), "Persistent test notice"));
+    focaltech = true;
+    fingers = 0U;
+    assert(ut_touch_probe(&touch, &bus, 800U, 480U) == UT_TOUCH_OK && touch.kind == UT_TOUCH_FT5X46);
+    ut_touch_reset_board_orientation(&touch);
+    ut_touch_input_disarm(&contact);
+    lv_indev_reset(pointer, NULL);
+    pump(2U);
+    assert(contact.armed && touch.transform.swap_xy);
+    click(200U, 87U);
+    assert(lv_obj_get_child_count(lv_screen_active()) == child_count + 1U);
+    drag(530U, 203U, 260U, 203U);
+    assert(ut_ui_settings()->threshold_percent < 30.0f);
+    drag(530U, 281U, 260U, 281U);
+    assert(ut_ui_settings()->sound_speed_mps < 5600.0f);
+    previous_auto_scale = ut_ui_settings()->auto_scale;
+    click(270U, 332U);
+    assert(ut_ui_settings()->auto_scale != previous_auto_scale);
+    click(612U, 105U);
+    assert(lv_obj_get_child_count(lv_screen_active()) == child_count);
+    assert(touch.sample.raw_x == 105U && touch.sample.raw_y == 612U);
+    assert(!touch.errors && !touch.rejected);
     lv_refr_now(display); lv_deinit();
-    puts("PASS: actual Goodix packets -> contact filter -> LVGL pointer -> tabs, 3D, navigation, diagnostics, orientation; fault/timeout/multitouch cancel without ghost clicks; hardware NOT tested");
+    puts("PASS: Goodix and portrait FT5x46 packets -> contact filter -> LVGL pointer; tabs, 3D, navigation, settings sliders, scale toggle, close and measured raw (105,612); fault/timeout/multitouch cancel without ghost clicks; hardware NOT tested");
     return 0;
 }

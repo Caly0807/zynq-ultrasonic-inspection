@@ -83,7 +83,7 @@ class DeviceHTTPServer(ThreadingHTTPServer):
             self.connection_slots.release()
 
 
-def create_server(address, port, peer, token, session, runtime_directory=None, vision=None):
+def create_server(address, port, peer, token, session, runtime_directory=None, vision=None, *, live=None, local_display_independent=False):
     access = NetworkAccess(private_address(address), private_address(peer), token)
     status = runtime_status()
     transport_lock = threading.Lock()
@@ -102,6 +102,16 @@ def create_server(address, port, peer, token, session, runtime_directory=None, v
         vision = BasicVision(Path(runtime_directory) / "vision/frame.ppm", session.spec.length_mm, session.spec.width_mm)
     def current_status():
         result = dict(status)
+        if live is not None:
+            result["real_capture"] = live.state()
+            result["live_capture_ready"] = result["real_capture"]["available"]
+            result["live_session_active"] = result["real_capture"]["active"]
+            result["transmit_enabled"] = result["real_capture"]["active"] or result["real_capture"]["capture_in_flight"]
+            result["realtime_endpoint"] = "/live"
+            result["limitations"] = ["Real ADC transport requires current operator arming and keepalive; reboot never arms TX",
+                                     "Depth and defect verdicts require approved time-zero, gates and material calibration",
+                                     "Motor motion is not enabled; positions remain manually confirmed",
+                                     "Reflector indications are not hole-shape reconstruction"]
         if runtime_directory is not None:
             result["services"] = service_health(runtime_directory)
         if vision is not None:
@@ -109,23 +119,25 @@ def create_server(address, port, peer, token, session, runtime_directory=None, v
             result["vision"] = vision.state()
             result["vision_active"] = result["vision"]["preview_available"]
         return result
-    provider = status if runtime_directory is None and vision is None else current_status
-    server = DeviceHTTPServer((address, port), make_map_handler(session, access_policy=access, device_status=provider,
-                                                               vision=vision, transport_test=transport_test))
+    provider = status if runtime_directory is None and vision is None and live is None else current_status
+    listen_address = "0.0.0.0" if local_display_independent else address
+    server = DeviceHTTPServer((listen_address, port), make_map_handler(session, capture=live, access_policy=access, device_status=provider,
+                                                               vision=vision, transport_test=transport_test, live=live))
     server.device_status = status
     server.basic_vision = vision
     return server
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Board-side diagnosis and mapping service; no HV or motion outputs")
+    parser = argparse.ArgumentParser(description="Board-side diagnosis and mapping; LIVE requires guarded hardware and explicit operator arming")
     parser.add_argument("--bind", default="127.0.0.1")
     parser.add_argument("--peer", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)
-    parser.add_argument("--mode", choices=("DEMO", "RECORDED"), default="RECORDED")
+    parser.add_argument("--mode", choices=("DEMO", "RECORDED", "LIVE"), default="RECORDED")
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--config", type=Path)
     parser.add_argument("--token-file", type=Path)
+    parser.add_argument("--local-display-independent", action="store_true")
     arguments = parser.parse_args(argv)
     private_address(arguments.bind)
     private_address(arguments.peer)
@@ -141,7 +153,15 @@ def main(argv=None):
     session = MapSession(arguments.data / run_name, MapSpec(**configuration.get("mapping", {})),
                          EchoConfig(**configuration.get("echo", {})), arguments.mode)
     session.bind_local_display(arguments.data / "lcd")
-    server = create_server(arguments.bind, arguments.port, arguments.peer, token, session, arguments.data)
+    live = None
+    if arguments.mode == "LIVE":
+        if runtime_status()["runtime"] != "ARM_LINUX":
+            raise ValueError("LIVE service must run on ARM Linux; no host-side simulated producer is accepted")
+        from .live_service import LiveAcquisition
+        live = LiveAcquisition(arguments.data / "lcd", session.echo)
+        live.start_worker()
+    server = create_server(arguments.bind, arguments.port, arguments.peer, token, session, arguments.data, live=live,
+                           local_display_independent=arguments.local_display_independent)
 
     def stop(signum, frame):
         threading.Thread(target=server.shutdown, daemon=True).start()
@@ -155,6 +175,8 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     finally:
+        if live is not None:
+            live.close()
         server.server_close()
         (session.root / "report.html").write_text(render_dashboard(session.snapshot()), encoding="utf-8")
     return 0

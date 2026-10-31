@@ -33,7 +33,7 @@ def reject_constant(value):
     raise ValueError("Non-finite JSON values are not accepted")
 
 
-def make_map_handler(session, capture=None, stop_event=None, *, access_policy=None, device_status=None, vision=None, transport_test=None):
+def make_map_handler(session, capture=None, stop_event=None, *, access_policy=None, device_status=None, vision=None, transport_test=None, live=None):
     stopped = stop_event or threading.Event()
     acquisition_lock = threading.Lock()
     submissions = {}
@@ -182,6 +182,10 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                     self.send_json(state)
                 elif route.path == "/api/device" and device_status is not None:
                     self.send_json(device_status() if callable(device_status) else device_status)
+                elif route.path == "/api/live" and live is not None:
+                    self.send_json(live.state())
+                elif route.path == "/live" and live is not None:
+                    self.send_data((ROOT / "web/realtime.html").read_bytes(), "text/html; charset=utf-8")
                 elif route.path == "/api/waveform":
                     point_id = parse_qs(route.query).get("point_id", [""])[0]
                     self.send_json(session.waveform(point_id))
@@ -221,6 +225,14 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                 if not isinstance(payload, dict):
                     raise ValueError("A JSON object is required")
                 route = urlsplit(self.path).path
+                if live is not None and route in ("/api/live/start", "/api/live/keepalive", "/api/live/stop"):
+                    if route == "/api/live/start":
+                        self.send_json(live.start(payload))
+                    elif route == "/api/live/keepalive":
+                        self.send_json(live.keepalive(payload))
+                    else:
+                        self.send_json(live.stop())
+                    return
                 if route == "/api/transport/selftest" and transport_test is not None:
                     self.send_json(transport_test(payload))
                     return
@@ -230,6 +242,8 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                     self.send_json(action())
                     return
                 if route == "/api/stop":
+                    if live is not None:
+                        live.stop()
                     stopped.set()
                     self.send_json({"ok": True})
                     threading.Thread(target=self.server.shutdown, daemon=True).start()

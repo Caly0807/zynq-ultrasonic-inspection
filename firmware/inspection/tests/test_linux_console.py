@@ -64,6 +64,36 @@ class LinuxTransportTests(unittest.TestCase):
 
 
 class BoardHealthTests(unittest.TestCase):
+    def test_touch_orientation_is_complete_typed_and_backward_compatible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "status.json"
+            touch = dict.fromkeys(TOUCH_COUNTERS, 0)
+            touch.update(bus_open=True, pressed=False, last_packet=[0] * 7)
+            record = dict(schema="ut-lcd-status/1", mode="LCD_TRANSPORT", updated_monotonic_ns=0,
+                          flushes=25, map_points=0, waveform_source=0, touch=touch)
+            path.write_text(json.dumps(record))
+            self.assertTrue(lcd_diagnostics(path)["available"])
+            orientation = dict(raw_width=480, raw_height=800, screen_width=800, screen_height=480,
+                               swap_xy=True, invert_x=False, invert_y=False)
+            touch.update(orientation, secret="never expose")
+            path.write_text(json.dumps(record))
+            result = lcd_diagnostics(path)
+            self.assertTrue(result["available"])
+            for field, value in orientation.items():
+                self.assertEqual(result["touch"][field], value)
+            self.assertNotIn("secret", result["touch"])
+            for field, value in (("raw_width", True), ("raw_height", -1), ("screen_width", 65536),
+                                 ("screen_height", "480"), ("swap_xy", 1), ("invert_x", None)):
+                with self.subTest(field=field, value=value):
+                    invalid = {**record, "touch": {**touch, field: value}}
+                    path.write_text(json.dumps(invalid))
+                    self.assertFalse(lcd_diagnostics(path)["available"])
+            for field in orientation:
+                invalid_touch = dict(touch)
+                del invalid_touch[field]
+                path.write_text(json.dumps({**record, "touch": invalid_touch}))
+                self.assertFalse(lcd_diagnostics(path)["available"])
+
     def test_touch_details_keep_short_presses_and_reject_partial_or_untyped_records(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "status.json"

@@ -82,6 +82,7 @@ static bool probe(void)
 {
     ut_touch_bus_t registers = {NULL, read_register, write_register, reset_controller};
     bool found = ut_touch_probe(&controller, &registers, 800U, 480U) == UT_TOUCH_OK;
+    if (found) ut_touch_reset_board_orientation(&controller);
     ut_touch_input_disarm(&contact);
     ut_ui_update_touch(&controller);
     return found;
@@ -112,7 +113,7 @@ void ut_zynq_touch_action(ut_action_t action)
     if (action == UT_ACTION_TOUCH_SWAP) controller.transform.swap_xy = !controller.transform.swap_xy;
     if (action == UT_ACTION_TOUCH_INVERT_X) controller.transform.invert_x = !controller.transform.invert_x;
     if (action == UT_ACTION_TOUCH_INVERT_Y) controller.transform.invert_y = !controller.transform.invert_y;
-    if (action == UT_ACTION_TOUCH_RESET) controller.transform.swap_xy = controller.transform.invert_x = controller.transform.invert_y = false;
+    if (action == UT_ACTION_TOUCH_RESET) ut_touch_reset_board_orientation(&controller);
     ut_touch_release(&controller);
     ut_touch_input_disarm(&contact);
     if (pointer) lv_indev_reset(pointer, NULL);

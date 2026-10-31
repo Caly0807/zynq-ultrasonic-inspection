@@ -2,7 +2,9 @@
 
 module md1213_capture_ip #(
     parameter integer CLK_HZ = 50_000_000,
-    parameter integer MIN_TRIGGER_INTERVAL_US = 10_000
+    parameter integer MIN_TRIGGER_INTERVAL_US = 10_000,
+    parameter integer LIVE_GUARD = 0,
+    parameter integer TX_LEASE_US = 250_000
 ) (
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 aclk CLK",
        X_INTERFACE_PARAMETER = "XIL_INTERFACENAME aclk, ASSOCIATED_BUSIF S_AXI:M_AXIS, ASSOCIATED_RESET aresetn, FREQ_HZ 50000000" *)
@@ -72,7 +74,8 @@ module md1213_capture_ip #(
        X_INTERFACE_PARAMETER = "XIL_INTERFACENAME interrupt, SENSITIVITY LEVEL_HIGH" *)
     output wire interrupt
 );
-    md1213_capture_axi #(.CLK_HZ(CLK_HZ), .MIN_TRIGGER_INTERVAL_US(MIN_TRIGGER_INTERVAL_US)) core (
+    md1213_capture_axi #(.CLK_HZ(CLK_HZ), .MIN_TRIGGER_INTERVAL_US(MIN_TRIGGER_INTERVAL_US),
+        .LIVE_GUARD(LIVE_GUARD), .TX_LEASE_US(TX_LEASE_US)) core (
         .aclk(aclk),
         .aresetn(aresetn),
         .adc_clk(adc_clk),

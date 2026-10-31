@@ -40,6 +40,8 @@ static ut_settings_t settings;
 static ut_metrics_t metrics;
 static ut_action_cb_t action_handler;
 static bool paused;
+static bool live_controls;
+static lv_obj_t *live_mode_button;
 
 static lv_color_t color(uint32_t value) { return lv_color_hex(value); }
 
@@ -171,7 +173,9 @@ static void open_settings(lv_event_t *event)
 
 static void action_event(lv_event_t *event)
 {
-    if (action_handler) action_handler((ut_action_t)(uintptr_t)lv_event_get_user_data(event));
+    ut_action_t action = (ut_action_t)(uintptr_t)lv_event_get_user_data(event);
+    if (live_controls && action == UT_ACTION_DEMO) action = UT_ACTION_LIVE_TOGGLE;
+    if (action_handler) action_handler(action);
 }
 
 static void refresh_touch_panel(void)
@@ -823,10 +827,15 @@ static void redraw_values(void)
     const char *status = !current_frame.count ? "等待数据" : !metrics.signal_present ? "无有效回波" :
                          metrics.clipped ? "信号饱和" : metrics.gate_a_crossed ? "疑似反射" :
                          metrics.gate_b_visible ? "底波可见" : "回波待确认";
+    bool live = current_frame.source == UT_SOURCE_LIVE;
+    const ut_diagnosis_t *diagnosis = &current_frame.diagnosis;
+    if (live && current_frame.count)
+        status = !diagnosis->present || diagnosis->status == UT_DIAG_INVALID ? "诊断无效" :
+                 !diagnosis->calibrated ? "参数未标定" : diagnosis->status == UT_DIAG_SUSPECT ? "疑似反射" : "门区未见指示";
     lv_label_set_text(status_label, status);
     lv_obj_set_style_text_color(status_label, color(metrics.clipped || metrics.gate_a_crossed ? COLOR_AMBER : COLOR_TEAL), 0);
     lv_label_set_text(status_detail, current_frame.source == UT_SOURCE_DEMO ? "演示数据 / 非实测结论" : "请使用标准试块完成标定");
-    if (metrics.gate_b_visible && !metrics.clipped) lv_label_set_text_fmt(thickness_label, "%.1f", (double)metrics.reference_thickness_mm);
+    if (metrics.gate_b_visible && !metrics.clipped && (!live || (diagnosis->present && diagnosis->calibrated && diagnosis->status != UT_DIAG_INVALID))) lv_label_set_text_fmt(thickness_label, "%.1f", (double)metrics.reference_thickness_mm);
     else lv_label_set_text(thickness_label, "--.-");
     if (current_frame.count) lv_label_set_text_fmt(amplitude_label, "%u", metrics.peak_to_peak);
     else lv_label_set_text(amplitude_label, "---");
@@ -853,7 +862,7 @@ void ut_ui_create(ut_action_cb_t action_callback)
     memset(&touch_state, 0, sizeof(touch_state));
     settings_overlay = notice_box = NULL;
     notice_timer = NULL;
-    touch_overlay_visible = paused = map_3d = false;
+    touch_overlay_visible = paused = map_3d = live_controls = false;
     map_selected_column = map_selected_row = 0;
     map_yaw = 0.65f;
     ut_settings_default(&settings);
@@ -883,7 +892,7 @@ void ut_ui_create(ut_action_cb_t action_callback)
     wave_tab_label = lv_obj_get_child(wave_tab, 0);
     active_tab_line = panel(root_screen, 79, 106, 56, 2, COLOR_TEAL, 0);
     button(root_screen, "参数设置", 159, 68, 86, 38, &ut_font_14, COLOR_MUTED, open_settings, NULL);
-    button(root_screen, "演示模式", 258, 68, 86, 38, &ut_font_14, COLOR_MUTED, action_event, (void *)(uintptr_t)UT_ACTION_DEMO);
+    live_mode_button = button(root_screen, "演示模式", 258, 68, 86, 38, &ut_font_14, COLOR_MUTED, action_event, (void *)(uintptr_t)UT_ACTION_DEMO);
     lv_obj_t *scan_tab = button(root_screen, "扫描复盘", 356, 68, 94, 38, &ut_font_14, COLOR_MUTED, select_view, (void *)(intptr_t)1);
     lv_obj_t *map_tab = button(root_screen, "二维面扫", 466, 68, 86, 38, &ut_font_14, COLOR_MUTED, select_map_view, NULL);
     scan_tab_label = lv_obj_get_child(scan_tab, 0);
@@ -974,6 +983,16 @@ void ut_ui_notify(const char *message)
     notice_timer = lv_timer_create(expire_notice, 4000U, NULL);
     lv_timer_set_repeat_count(notice_timer, 1);
 }
+void ut_ui_set_live_controls(bool active)
+{
+    live_controls = true;
+    if (live_mode_button) {
+        lv_obj_t *caption = lv_obj_get_child(live_mode_button, 0);
+        lv_label_set_text(caption, active ? "STOP" : "LIVE");
+        lv_obj_center(caption);
+    }
+}
+
 bool ut_ui_is_paused(void) { return paused; }
 const ut_settings_t *ut_ui_settings(void) { return &settings; }
 void ut_ui_open_settings(void) { open_settings(NULL); }

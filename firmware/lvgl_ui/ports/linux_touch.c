@@ -49,6 +49,7 @@ static bool probe(void)
     probes++;
     ut_touch_bus_t bus = {NULL, read_register, write_register, NULL};
     bool ready = ut_touch_probe(&controller, &bus, 800, 480) == UT_TOUCH_OK;
+    if (ready) ut_touch_reset_board_orientation(&controller);
     ut_touch_input_disarm(&contact);
     ut_ui_update_touch(&controller);
     return ready;
@@ -104,7 +105,7 @@ void ut_linux_touch_action(ut_action_t action)
     if (action == UT_ACTION_TOUCH_SWAP) controller.transform.swap_xy = !controller.transform.swap_xy;
     if (action == UT_ACTION_TOUCH_INVERT_X) controller.transform.invert_x = !controller.transform.invert_x;
     if (action == UT_ACTION_TOUCH_INVERT_Y) controller.transform.invert_y = !controller.transform.invert_y;
-    if (action == UT_ACTION_TOUCH_RESET) controller.transform.swap_xy = controller.transform.invert_x = controller.transform.invert_y = false;
+    if (action == UT_ACTION_TOUCH_RESET) ut_touch_reset_board_orientation(&controller);
     ut_touch_release(&controller);
     ut_touch_input_disarm(&contact);
     if (pointer) lv_indev_reset(pointer, NULL);
@@ -125,6 +126,8 @@ bool ut_linux_touch_write_status(FILE *output)
         "\"ft_chip_id\":%u,\"ft_version\":%u,\"goodix_product_code\":%u,"
         "\"pressed\":%s,\"press_events\":%u,\"release_events\":%u,"
         "\"raw_x\":%u,\"raw_y\":%u,\"x\":%u,\"y\":%u,"
+        "\"raw_width\":%u,\"raw_height\":%u,\"screen_width\":%u,\"screen_height\":%u,"
+        "\"swap_xy\":%s,\"invert_x\":%s,\"invert_y\":%s,"
         "\"last_packet\":[%u,%u,%u,%u,%u,%u,%u],"
         "\"probes\":%u,\"raw_press_samples\":%u,\"cancel_events\":%u,\"input_armed\":%s,"
         "\"last_poll_ms\":%u,\"last_press_ms\":%u,\"last_press_x\":%u,\"last_press_y\":%u,"
@@ -134,6 +137,10 @@ bool ut_linux_touch_write_status(FILE *output)
         (unsigned)controller.last_result, controller.ft_chip_id, controller.ft_version,
         controller.goodix_product_code, contact.pressed ? "true" : "false", press_events, release_events,
         controller.sample.raw_x, controller.sample.raw_y, contact.x, contact.y,
+        controller.transform.raw_width, controller.transform.raw_height,
+        controller.transform.screen_width, controller.transform.screen_height,
+        controller.transform.swap_xy ? "true" : "false", controller.transform.invert_x ? "true" : "false",
+        controller.transform.invert_y ? "true" : "false",
         controller.last_packet[0], controller.last_packet[1], controller.last_packet[2],
         controller.last_packet[3], controller.last_packet[4], controller.last_packet[5], controller.last_packet[6],
         probes, raw_press_samples, cancel_events, contact.armed ? "true" : "false",

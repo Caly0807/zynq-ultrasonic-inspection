@@ -6,6 +6,14 @@
 #define UT_SAMPLE_CAPACITY 4096
 
 typedef enum { UT_SOURCE_WAITING, UT_SOURCE_RECORDED, UT_SOURCE_LIVE, UT_SOURCE_DEMO } ut_source_t;
+typedef enum { UT_DIAG_INVALID, UT_DIAG_UNCALIBRATED, UT_DIAG_SUSPECT, UT_DIAG_NO_INDICATION } ut_diagnosis_status_t;
+typedef struct {
+    bool present, calibrated, baseline_valid, depth_valid, flaw_crossed, backwall_visible, clipped;
+    ut_diagnosis_status_t status;
+    uint32_t reason;
+    float baseline, noise, depth_mm, flaw_amplitude, flaw_time_us;
+    float backwall_amplitude, backwall_time_us, reference_thickness_mm, time_zero_us, sound_speed_mps;
+} ut_diagnosis_t;
 typedef struct {
     uint8_t samples[UT_SAMPLE_CAPACITY];
     size_t count;
@@ -15,6 +23,7 @@ typedef struct {
     bool overrange;
     ut_source_t source;
     char source_name[96];
+    ut_diagnosis_t diagnosis;
 } ut_frame_t;
 typedef struct {
     float gate_a_start_us, gate_a_end_us;

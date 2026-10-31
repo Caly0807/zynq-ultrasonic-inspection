@@ -21,6 +21,21 @@ void ut_touch_release(ut_touch_t *touch)
     if (touch) { touch->sample.pressed = false; touch->sample.fingers = 0; }
 }
 
+void ut_touch_reset_board_orientation(ut_touch_t *touch)
+{
+    if (!touch) return;
+    bool portrait = touch->kind == UT_TOUCH_FT5X46 && touch->transform.screen_width == 800U &&
+                    touch->transform.screen_height == 480U;
+    if (touch->kind == UT_TOUCH_FT5206 || touch->kind == UT_TOUCH_FT5X46) {
+        touch->transform.raw_width = portrait ? touch->transform.screen_height : touch->transform.screen_width;
+        touch->transform.raw_height = portrait ? touch->transform.screen_width : touch->transform.screen_height;
+    }
+    touch->transform.swap_xy = portrait;
+    touch->transform.invert_x = false;
+    touch->transform.invert_y = false;
+    ut_touch_release(touch);
+}
+
 static bool goodix_product(const uint8_t *product)
 {
     return !memcmp(product, "911\0", 4) || !memcmp(product, "9110", 4) || !memcmp(product, "9147", 4) ||

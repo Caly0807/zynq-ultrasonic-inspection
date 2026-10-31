@@ -17,6 +17,8 @@ CAMERA_COUNTERS = ("errno", "width", "height", "stride", "pixel_format", "sequen
 TOUCH_COUNTERS = ("kind", "address", "probe_ack_mask", "reads", "errors", "rejected", "last_result",
                   "ft_chip_id", "ft_version", "goodix_product_code", "press_events", "release_events", "raw_x", "raw_y", "x", "y")
 TOUCH_DETAIL_COUNTERS = ("probes", "raw_press_samples", "cancel_events", "last_poll_ms", "last_press_ms", "last_press_x", "last_press_y")
+TOUCH_ORIENTATION_DIMENSIONS = ("raw_width", "raw_height", "screen_width", "screen_height")
+TOUCH_ORIENTATION_FLAGS = ("swap_xy", "invert_x", "invert_y")
 
 
 def private_status(path):
@@ -62,6 +64,13 @@ def lcd_diagnostics(path):
                     any(type(value) is not int or not 0 <= value <= 255 for value in pressed_packet)):
                 return unavailable
             safe["touch"].update({key: touch[key] for key in details})
+        orientation = (*TOUCH_ORIENTATION_DIMENSIONS, *TOUCH_ORIENTATION_FLAGS)
+        if any(key in touch for key in orientation):
+            if any(type(touch.get(key)) is not int or not 0 <= touch[key] < 2 ** 16 for key in TOUCH_ORIENTATION_DIMENSIONS):
+                return unavailable
+            if any(type(touch.get(key)) is not bool for key in TOUCH_ORIENTATION_FLAGS):
+                return unavailable
+            safe["touch"].update({key: touch[key] for key in orientation})
         age = time.monotonic_ns() - record["updated_monotonic_ns"]
         safe.update(available=True, basis=unavailable["basis"], diagnostic_age_ms=age // 1000000 if age >= 0 else None)
         return safe

@@ -18,6 +18,8 @@ void ut_analyze(const ut_frame_t *frame, const ut_settings_t *settings, ut_metri
     if (baseline_count > frame->count) baseline_count = frame->count;
     for (size_t index = 0; index < baseline_count; index++) metrics->baseline += frame->samples[index];
     metrics->baseline /= (float)baseline_count;
+    if (frame->source == UT_SOURCE_LIVE)
+        metrics->baseline = frame->diagnosis.present && frame->diagnosis.baseline_valid ? frame->diagnosis.baseline : 128.0f;
     metrics->minimum = 255;
     for (size_t index = 0; index < frame->count; index++) {
         unsigned value = frame->samples[index];
@@ -44,6 +46,17 @@ void ut_analyze(const ut_frame_t *frame, const ut_settings_t *settings, ut_metri
     metrics->gate_a_crossed = metrics->signal_present && metrics->gate_a_amplitude >= settings->threshold_percent * 1.28f;
     metrics->gate_b_visible = metrics->signal_present && metrics->gate_b_amplitude >= 6.0f;
     metrics->reference_thickness_mm = metrics->gate_b_time_us * settings->sound_speed_mps / 2000.0f;
+    if (frame->source == UT_SOURCE_LIVE) {
+        const ut_diagnosis_t *diagnosis = &frame->diagnosis;
+        metrics->gate_a_crossed = diagnosis->present && diagnosis->flaw_crossed;
+        metrics->gate_b_visible = diagnosis->present && diagnosis->backwall_visible;
+        metrics->gate_a_amplitude = diagnosis->flaw_amplitude;
+        metrics->gate_a_time_us = diagnosis->flaw_time_us;
+        metrics->gate_b_amplitude = diagnosis->backwall_amplitude;
+        metrics->gate_b_time_us = diagnosis->backwall_time_us;
+        metrics->reference_thickness_mm = diagnosis->reference_thickness_mm;
+        metrics->clipped = metrics->clipped || diagnosis->clipped;
+    }
 }
 
 void ut_generate_demo(ut_frame_t *frame, unsigned phase, bool reflector)

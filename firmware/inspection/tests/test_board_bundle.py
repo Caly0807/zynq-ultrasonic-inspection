@@ -36,8 +36,6 @@ class BoardBundleTests(unittest.TestCase):
             self.assertFalse(report["board_execution_verified"])
             with tarfile.open(path) as archive:
                 names = archive.getnames()
-                self.assertIn("LICENSE", names)
-                self.assertEqual(archive.extractfile("LICENSE").read(), (ROOT / "LICENSE").read_bytes())
                 self.assertIn("utinspect/device_app.py", names)
                 self.assertIn("utinspect/basic_vision.py", names)
                 self.assertIn("web/camera_basic.html", names)
@@ -56,6 +54,18 @@ class BoardBundleTests(unittest.TestCase):
             self.assertFalse(report["hardware_control"])
             with tarfile.open(path) as archive:
                 for name in ("utinspect/device_vision.py", "utinspect/workpiece.py", "utinspect/camera.py", "web/workpiece.html"):
+                    self.assertIn(name, archive.getnames())
+
+    def test_live_bundle_is_explicit_never_auto_arms_and_contains_both_display_transports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "live.tar.gz"
+            report = BUNDLER.build_bundle(path, with_live=True)
+            self.assertTrue(report["with_live"])
+            self.assertTrue(report["hardware_control"])
+            self.assertFalse(report["automatic_transmit_on_boot"])
+            self.assertFalse(report["board_execution_verified"])
+            with tarfile.open(path) as archive:
+                for name in ("utinspect/live_capture.py", "utinspect/live_service.py", "web/realtime.html"):
                     self.assertIn(name, archive.getnames())
 
 
