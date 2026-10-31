@@ -162,6 +162,11 @@ def main(argv=None):
         live.start_worker()
     server = create_server(arguments.bind, arguments.port, arguments.peer, token, session, arguments.data, live=live,
                            local_display_independent=arguments.local_display_independent)
+    local_scan = None
+    if live is not None:
+        from .local_scan import LocalScan
+        local_scan = LocalScan(arguments.data / "lcd", session, server.basic_vision, live)
+        local_scan.start_worker()
 
     def stop(signum, frame):
         threading.Thread(target=server.shutdown, daemon=True).start()
@@ -175,6 +180,8 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     finally:
+        if local_scan is not None:
+            local_scan.close()
         if live is not None:
             live.close()
         server.server_close()

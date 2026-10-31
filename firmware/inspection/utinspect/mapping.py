@@ -97,7 +97,7 @@ class MapSession:
         (self.root / "waveforms").mkdir()
         self._commit()
 
-    def add(self, frame, position_x, position_y, position_confirmed=False, *, submission_id=None):
+    def add(self, frame, position_x, position_y, position_confirmed=False, *, submission_id=None, visual_evidence=None):
         with self.lock:
             validate_submission_id(submission_id)
             if submission_id is not None and submission_id in self.submission_ids:
@@ -119,6 +119,8 @@ class MapSession:
                 age = time.monotonic_ns() - (frame.acquired_monotonic_ns or 0)
                 if frame.acquired_monotonic_ns is None or not 0 <= age <= 2_000_000_000:
                     raise ValueError("LIVE mapping requires a fresh same-host acquisition timestamp")
+            if visual_evidence is not None:
+                self._validate_visual_evidence(frame, visual_evidence)
             diagnosis = analyze(frame, self.echo)
             status = normalized_status(diagnosis)
             depth = diagnosis["depth_mm"]
@@ -138,7 +140,7 @@ class MapSession:
             write_lvgl_csv(waveform_path, frame)
             record = {"point_id": point_id, "index": len(self.points), "frame_id": frame.frame_id, "submission_id": submission_id,
                       "source": frame.source, "position_mm": [float(position_x), float(position_y)],
-                      "position_basis": "OPERATOR_ENTERED_WORKPIECE_MM_UNVERIFIED",
+                      "position_basis": "CAMERA_MARKER_ESTIMATE_UNVERIFIED" if visual_evidence else "OPERATOR_ENTERED_WORKPIECE_MM_UNVERIFIED",
                       "position_confirmed": True, "position_accuracy_mm": None,
                       "created_unix_ns": time.time_ns(), "diagnosis": diagnosis, "status": status,
                       "reflector_depth_mm": depth,
@@ -146,6 +148,10 @@ class MapSession:
                       "depth_reason": depth_reason, "hole_height_mm": None, "hole_diameter_mm": None,
                       "waveform": relative, "waveform_sha256": hashlib.sha256(waveform_path.read_bytes()).hexdigest(),
                       "preview": envelope(frame)}
+            if visual_evidence is not None:
+                record["visual_evidence"] = dict(visual_evidence)
+                record["position_confirmed"] = False
+                record["continuous_tracking_operator_confirmed"] = True
             self.points.append(record)
             self.frame_ids.add(frame.frame_id)
             if submission_id is not None:
@@ -159,6 +165,22 @@ class MapSession:
                     self.submission_ids.remove(submission_id)
                 raise
             return record
+
+    @staticmethod
+    def _validate_visual_evidence(frame, evidence):
+        if (frame.source != "LIVE" or not isinstance(evidence, dict) or
+                set(evidence) != {"camera_frame_id", "camera_monotonic_ns", "adc_monotonic_ns", "skew_ms", "stable_ms", "timing_basis"}):
+            raise ValueError("Visual mapping needs bounded real-camera timing evidence")
+        camera_id = evidence["camera_frame_id"]
+        camera_time, adc_time = evidence["camera_monotonic_ns"], evidence["adc_monotonic_ns"]
+        if (not isinstance(camera_id, str) or not camera_id.startswith("USB_CAMERA-") or len(camera_id) > 160 or
+                type(camera_time) is not int or type(adc_time) is not int or camera_time <= 0 or
+                adc_time != frame.acquired_monotonic_ns or abs(camera_time - adc_time) > 200_000_000 or
+                not all(finite_number(evidence[name]) for name in ("skew_ms", "stable_ms")) or
+                abs(evidence["skew_ms"] - abs(camera_time - adc_time) / 1_000_000) > .001 or
+                not 350 <= evidence["stable_ms"] <= 60_000 or
+                evidence["timing_basis"] != "DEQUEUE_TIMESTAMPS_NOT_SENSOR_SYNCHRONIZED"):
+            raise ValueError("Camera and ADC evidence is stale, moving or not time-associated")
 
     def snapshot(self):
         with self.lock:
@@ -179,10 +201,11 @@ class MapSession:
             return {"schema": "ut-manual-map/1", "session_id": self.session_id,
                     "created_unix_ns": self.created_unix_ns, "source": self.mode, "spec": asdict(self.spec),
                     "echo": asdict(self.echo), "columns": self.spec.columns, "rows": self.spec.rows,
-                    "position_basis": "OPERATOR_ENTERED_WORKPIECE_MM_UNVERIFIED",
+                    "position_basis": "CAMERA_MARKER_ESTIMATE_UNVERIFIED" if any("visual_evidence" in point for point in self.points) else "OPERATOR_ENTERED_WORKPIECE_MM_UNVERIFIED",
                     "coverage_basis": "SAMPLED_GRID_CELLS_NOT_PHYSICAL_BEAM_COVERAGE",
                     "point_count": len(self.points), "sampled_cells": visited, "total_cells": len(cells),
                     "grid_coverage_percent": visited * 100.0 / len(cells),
+                    "valid_cells": sum(cell["status"] in ("NO_INDICATION", "SUSPECT") for cell in cells),
                     "suspect_cells": sum(cell["status"] == "SUSPECT" for cell in cells),
                     "invalid_cells": sum(cell["status"] == "INVALID" for cell in cells),
                     "depth_point_count": sum(point["reflector_depth_mm"] is not None for point in self.points),
@@ -211,6 +234,15 @@ class MapSession:
             self.display_directory = Path(directory).resolve()
             self.display_directory.mkdir(parents=True, exist_ok=True)
             self._publish_display(self.snapshot())
+
+    def begin_new(self):
+        with self.lock:
+            incoming = MapSession(self.root.parent / ("session_" + uuid.uuid4().hex), self.spec, self.echo, self.mode)
+            if self.display_directory is not None:
+                incoming.bind_local_display(self.display_directory)
+            for name in ("root", "session_id", "created_unix_ns", "points", "frame_ids", "submission_ids", "bridge_error"):
+                setattr(self, name, getattr(incoming, name))
+            return self.snapshot()
 
     def _publish_display(self, snapshot):
         destination = self.display_directory

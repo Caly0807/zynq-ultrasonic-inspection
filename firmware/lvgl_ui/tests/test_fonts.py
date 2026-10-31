@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class FontSubsetTests(unittest.TestCase):
     def test_all_ui_characters_and_symbols_are_in_each_generated_font(self):
-        source = (ROOT / "src/ut_ui.c").read_text(encoding="utf-8")
+        source = "\n".join(path.read_text(encoding="utf-8") for directory in ("src", "ports") for path in sorted((ROOT / directory).glob("*.c")))
         expected = sorted(set(range(32, 127)) | {ord(character) for character in source if ord(character) >= 0x80})
         asset = (ROOT / "assets/ut_font.c").read_text(encoding="utf-8")
         for size in (14, 16, 20):

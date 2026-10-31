@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 font_path = ROOT / "vendor" / "noto" / "NotoSansSC-Regular.otf"
-text = (ROOT / "src" / "ut_ui.c").read_text(encoding="utf-8")
+text = "\n".join(path.read_text(encoding="utf-8") for directory in ("src", "ports") for path in sorted((ROOT / directory).glob("*.c")))
 codepoints = sorted(set(range(32, 127)) | {ord(character) for character in text if ord(character) >= 0x80})
 output = ['#include "lvgl.h"']
 for size in (14, 16, 20):

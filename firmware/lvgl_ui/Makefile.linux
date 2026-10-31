@@ -5,7 +5,7 @@ CPPFLAGS += -DLV_CONF_INCLUDE_SIMPLE -DLV_LVGL_H_INCLUDE_SIMPLE -I. -Ivendor/lvg
 CFLAGS += -std=c11 -O2 -ffunction-sections -fdata-sections -finput-charset=UTF-8
 LDFLAGS += -Wl,--gc-sections
 LVGL_SOURCES := $(shell find vendor/lvgl/src -name '*.c')
-APP_SOURCES := ports/linux_main.c ports/linux_touch.c ports/linux_live.c src/ut_ui.c src/ut_model.c src/ut_map.c src/ut_scan.c src/ut_board_demo.c src/ut_rgb.c src/ut_touch.c src/ut_touch_input.c assets/ut_font.c
+APP_SOURCES := ports/linux_main.c ports/linux_touch.c ports/linux_live.c ports/linux_scan.c src/ut_local_scan_ui.c src/ut_ui.c src/ut_model.c src/ut_map.c src/ut_scan.c src/ut_board_demo.c src/ut_rgb.c src/ut_touch.c src/ut_touch_input.c assets/ut_font.c
 LVGL_OBJECTS := $(patsubst %.c,$(OUT)/%.o,$(LVGL_SOURCES))
 APP_OBJECTS := $(patsubst %.c,$(OUT)/%.o,$(APP_SOURCES))
 

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import math
 import os
 import stat
 import sys
@@ -78,6 +79,37 @@ def lcd_diagnostics(path):
         return unavailable
 
 
+def local_scan_diagnostics(path):
+    unavailable = {"available": False, "basis": "LOCAL_CONTROL_TELEMETRY_NOT_PHYSICAL_SCAN_ACCEPTANCE"}
+    try:
+        record = private_status(path)
+        if (record.get("schema") != "ut-local-scan/1" or record.get("phase") not in ("IDLE", "SCANNING", "FINISHED") or
+                record.get("reason") not in ("WAITING", "READY", "NO_CAMERA", "NEED_CORNERS", "NEED_LOCAL_LIVE", "MARKER_LOST",
+                                             "HOLD_STILL", "RECORDED", "FINISHED", "ERROR", "UNCALIBRATED", "ALREADY_SAMPLED",
+                                             "TIMING_MISMATCH", "CALIBRATION_CHANGED", "INVALID_ECHO")):
+            return unavailable
+        for key in ("updated_monotonic_ns", "sampled_cells", "total_cells", "valid_cells"):
+            if type(record.get(key)) is not int or not 0 <= record[key] < 2 ** 63:
+                return unavailable
+        if not 0 <= record["valid_cells"] <= record["sampled_cells"] <= record["total_cells"] <= 1024 or not record["total_cells"]:
+            return unavailable
+        for key in ("echo_calibrated", "position_accuracy_verified", "no_network_required", "results_volatile"):
+            if type(record.get(key)) is not bool:
+                return unavailable
+        position = record.get("position_mm")
+        if position is not None and (not isinstance(position, list) or len(position) != 2 or
+                                     any(type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 10000 for value in position)):
+            return unavailable
+        age = time.monotonic_ns() - record["updated_monotonic_ns"]
+        if not 0 <= age <= 3_000_000_000:
+            return unavailable
+        safe = {key: record[key] for key in ("schema", "phase", "reason", "updated_monotonic_ns", "sampled_cells", "total_cells",
+                                             "valid_cells", "echo_calibrated", "position_accuracy_verified", "no_network_required", "results_volatile")}
+        return {**safe, **unavailable, "available": True, "position_mm": position, "diagnostic_age_ms": age // 1_000_000}
+    except (OSError, UnicodeError, ValueError, TypeError):
+        return unavailable
+
+
 def camera_diagnostics(path):
     unavailable = {"available": False, "basis": "HELPER_STATE_NOT_PHYSICAL_ACCEPTANCE"}
     try:
@@ -129,6 +161,7 @@ def service_health(directory):
             "camera_node_present": sys.platform == "linux" and Path("/dev/video0").is_char_device(),
             "camera_diagnostics": camera_diagnostics(root / "vision/status.json"),
             "lcd_diagnostics": lcd_diagnostics(root / "lcd/status.json"),
+            "local_scan_diagnostics": local_scan_diagnostics(root / "lcd/scan-status.json"),
             "opencv_module_present": opencv, "numpy_module_present": numpy,
             "physical_lcd_verified": False, "physical_touch_verified": False,
             "real_capture_verified": False, "persistent_storage_verified": False}

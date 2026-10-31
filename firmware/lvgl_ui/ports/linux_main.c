@@ -16,6 +16,8 @@
 #include "ut_rgb.h"
 #include "linux_touch.h"
 #include "linux_live.h"
+#include "linux_scan.h"
+#include "ut_local_scan_ui.h"
 
 static volatile sig_atomic_t running = 1;
 static uint8_t *pixels;
@@ -33,6 +35,10 @@ static const char *live_directory;
 static char live_owner[37];
 static bool live_requested;
 static uint64_t confirmation_deadline, last_keepalive;
+static uint64_t live_started, scan_confirmation_deadline;
+static uint64_t new_scan_confirmation_deadline;
+static uint8_t camera_preview[UT_LOCAL_PREVIEW_BYTES];
+static ut_local_scan_t last_local_scan;
 
 static uint64_t monotonic_ns(void)
 {
@@ -71,6 +77,29 @@ static void reload_live(void)
         frame.source = UT_SOURCE_WAITING;
         ut_ui_update(&frame);
     }
+}
+
+static void reload_local_scan(void)
+{
+    if (!live_directory) return;
+    uint64_t now = monotonic_ns();
+    ut_local_scan_t state;
+    if (!ut_linux_scan_read(live_directory, now, &state)) {
+        if (live_requested && now - live_started > 3000000000ULL) live_stop();
+        last_local_scan.flags = 0;
+        last_local_scan.phase = 0;
+        last_local_scan.reason = 9;
+        ut_local_scan_ui_update(&last_local_scan, NULL);
+        return;
+    }
+    last_local_scan = state;
+    if (live_requested && !(state.flags & 16U) && now - live_started > 1500000000ULL) live_stop();
+    const uint8_t *preview = NULL;
+    if (ut_local_scan_ui_visible()) {
+        if (ut_linux_scan_preview(live_directory, now, camera_preview, sizeof(camera_preview))) preview = camera_preview;
+        else state.flags &= ~1U;
+    }
+    ut_local_scan_ui_update(&state, preview);
 }
 
 static bool changed(const char *path, const struct stat *previous, bool seen, struct stat *current)
@@ -174,6 +203,7 @@ static void handle_action(ut_action_t action)
             live_requested = true;
             confirmation_deadline = 0;
             last_keepalive = now;
+            live_started = now;
             ut_ui_set_live_controls(true);
             ut_ui_notify("Guarded real ADC requested / STOP or pause ends acquisition");
         } else ut_ui_notify("Live request failed / no trigger requested");
@@ -192,6 +222,54 @@ static void handle_action(ut_action_t action)
         ut_ui_notify("Export the complete report from the PC dashboard");
     } else if (action >= UT_ACTION_TOUCH_RETRY && action <= UT_ACTION_TOUCH_RESET) {
         ut_linux_touch_action(action);
+    }
+}
+
+static void handle_local_action(ut_local_action_t action, float position_x, float position_y)
+{
+    if (!live_directory) return;
+    uint64_t now = monotonic_ns();
+    if (action == UT_LOCAL_LIVE) {
+        ut_local_scan_t state;
+        if (!live_requested && ut_linux_scan_read(live_directory, now, &state) && (state.flags & 16U)) {
+            live_stop();
+            return;
+        }
+        handle_action(UT_ACTION_LIVE_TOGGLE);
+        if (confirmation_deadline) ut_local_scan_ui_notice("确认探头已耦合、可安全发射：5 秒内再按一次真实波形");
+        return;
+    }
+    if (action == UT_LOCAL_MAP_3D) {
+        ut_local_scan_ui_show(false);
+        ut_ui_show_map(true);
+        ut_ui_set_map_3d(true);
+        return;
+    }
+    if (action == UT_LOCAL_START) {
+        if (!scan_confirmation_deadline || now > scan_confirmation_deadline) {
+            scan_confirmation_deadline = now + 5000000000ULL;
+            ut_local_scan_ui_notice("确认探头垂直、相机与工件固定：5 秒内再按一次开始面扫");
+            return;
+        }
+        scan_confirmation_deadline = 0;
+    }
+    if (action == UT_LOCAL_NEW) {
+        if (!new_scan_confirmation_deadline || now > new_scan_confirmation_deadline) {
+            new_scan_confirmation_deadline = now + 5000000000ULL;
+            ut_local_scan_ui_notice("保留旧报告并新建工件？5 秒内再按一次新工件；采集将停止");
+            return;
+        }
+        new_scan_confirmation_deadline = 0;
+    }
+    if (action == UT_LOCAL_FINISH || action == UT_LOCAL_NEW) live_stop();
+    if (!ut_linux_scan_command(live_directory, action, position_x, position_y, now)) {
+        ut_local_scan_ui_notice("请求尚未处理或不可用，请在界面刷新后重试");
+        return;
+    }
+    if (action == UT_LOCAL_FINISH) {
+        ut_local_scan_ui_show(false);
+        ut_ui_show_map(true);
+        ut_ui_set_map_3d(false);
     }
 }
 
@@ -288,7 +366,10 @@ int main(int argument_count, char **arguments)
     lv_display_set_buffers(display, draw_buffer, NULL, sizeof(draw_buffer), LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(display, flush_display);
     ut_ui_create(handle_action);
-    if (live_directory) ut_ui_set_live_controls(false);
+    if (live_directory) {
+        ut_ui_set_live_controls(false);
+        ut_local_scan_ui_create(handle_local_action);
+    }
     if (touch_path && !headless_output)
         printf("UT_LINUX_TOUCH identified=%u; physical acceptance still required\n", ut_linux_touch_open(touch_path));
     if (allow_demo) {
@@ -311,6 +392,7 @@ int main(int argument_count, char **arguments)
         lv_timer_handler();
         if (iterations % 25U == 0) reload_files();
         if (iterations % 5U == 0) reload_live();
+        if (iterations % 20U == 0) reload_local_scan();
         if (iterations % 50U == 0) publish_runtime_status(headless_output != NULL);
         struct timespec delay = {0, 10000000L};
         nanosleep(&delay, NULL);

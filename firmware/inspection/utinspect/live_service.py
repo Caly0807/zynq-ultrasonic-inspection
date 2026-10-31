@@ -104,6 +104,14 @@ class LiveAcquisition:
                     raise TimeoutError("No new ADC frame followed this map request; no stale point was committed")
                 self.condition.wait(min(remaining, 0.05))
 
+    def mapping_frame(self):
+        with self.condition:
+            waveform = self.latest_waveform
+            if (not self._active() or waveform is None or
+                    not 0 <= self.clock() - waveform.acquired_monotonic_ns <= 300_000_000):
+                return None, None
+            return self.owner, waveform
+
     def start_worker(self):
         if self.worker is not None:
             raise ValueError("The acquisition worker can only be started once")

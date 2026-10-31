@@ -32,7 +32,8 @@ class CameraFrame:
 
     def metadata(self, now):
         return {"frame_id": self.frame_id, "width": self.width, "height": self.height,
-                "sequence": self.sequence, "age_ms": round((now - self.captured_ns) / 1_000_000, 1)}
+                "sequence": self.sequence, "age_ms": round((now - self.captured_ns) / 1_000_000, 1),
+                "captured_monotonic_ns": self.captured_ns, "stream_id": self.stream_id}
 
 
 def parse_frame(data, now_ns, allow_host_fixture=False):
@@ -241,6 +242,28 @@ class BasicVision:
             if self.png_key != frame.frame_id:
                 self.png, self.png_key = png_bytes(frame), frame.frame_id
             return self.png
+
+    def local_preview(self, width=320, height=240):
+        with self.lock:
+            current, now = self._current()
+            frame = self.selection if self.selection is not None and 0 <= now - self.selection_created_ns <= SELECTION_AGE_NS else current
+            output = bytearray(width * height * 4)
+            for row in range(height):
+                source_row = min(frame.height - 1, row * frame.height // height)
+                source = frame.pixels[source_row * frame.width * 3:(source_row + 1) * frame.width * 3]
+                if frame.width % width == 0:
+                    stride = frame.width // width * 3
+                    red, green, blue = source[0::stride], source[1::stride], source[2::stride]
+                else:
+                    columns = [column * frame.width // width * 3 for column in range(width)]
+                    red = bytes(source[column] for column in columns)
+                    green = bytes(source[column + 1] for column in columns)
+                    blue = bytes(source[column + 2] for column in columns)
+                start, end = row * width * 4, (row + 1) * width * 4
+                output[start:end:4] = blue
+                output[start + 1:end:4] = green
+                output[start + 2:end:4] = red
+            return bytes(output), frame.metadata(now)
 
     def freeze(self):
         with self.lock:
