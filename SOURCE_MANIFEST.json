@@ -42,8 +42,8 @@
       "sha256": "bab2929ad04fa8a155b0c745ce53f910d7c77d937d8d4fdb010e52c7a82bdf14"
     },
     "README.md": {
-      "bytes": 6135,
-      "sha256": "c0de5d4402b0a7dd3abe5f934770a9dd2f95478969148d3f673c6cfad814db0d"
+      "bytes": 6513,
+      "sha256": "7ce46b3148b783d79eeee950a23bd9565c7853dda261555c759147a39328f3a2"
     },
     "SAFETY.md": {
       "bytes": 1632,
@@ -646,8 +646,8 @@
       "sha256": "9d5244960dcad421e40939e820bae4900d9868c3b887e05b279e90a786e125e4"
     },
     "petalinux/linux/jtag-uboot.cfg": {
-      "bytes": 450,
-      "sha256": "c0be566328fcd85025dff724b6af6086d722aaa0da0049a85f7ee89110d22f3b"
+      "bytes": 423,
+      "sha256": "6fecd6a0b364e91cf4f0403a8abc7553254ca16a6dc7c3dfe4329e8cf1588f5e"
     },
     "petalinux/linux/network-system-user.dtsi": {
       "bytes": 361,
@@ -709,5 +709,7 @@
   "automatic_transmit_on_boot": false,
   "physical_cold_boot_verified": false,
   "camera_readonly_monitor_seconds": 3600.405,
-  "camera_readonly_monitor_failed_samples": 0
+  "camera_readonly_monitor_failed_samples": 0,
+  "startup_without_pc_ethernet_verified": true,
+  "startup_test_basis": "JTAG requested with PC Ethernet disabled; physical cold boot not yet verified"
 }
