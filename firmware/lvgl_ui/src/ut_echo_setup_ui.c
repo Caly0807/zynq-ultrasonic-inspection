@@ -62,7 +62,13 @@ static void open_event(lv_event_t *event)
     lv_obj_move_foreground(overlay);
 }
 
-static void close_event(lv_event_t *event) { (void)event; deadline = 0; lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN); }
+static void close_event(lv_event_t *event)
+{
+    (void)event;
+    deadline = 0;
+    if (selector) lv_dropdown_close(selector);
+    lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+}
 bool ut_echo_setup_ui_visible(void) { return overlay && !lv_obj_has_flag(overlay, LV_OBJ_FLAG_HIDDEN); }
 
 static void show_value(void)

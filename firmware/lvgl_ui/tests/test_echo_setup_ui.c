@@ -124,6 +124,24 @@ int main(int argument_count, char **arguments)
     assert(calls == 4);
     press("返回");
     assert(!ut_echo_setup_ui_visible());
+    controls = NULL;
+    press("声学设置");
+    controls = lv_obj_get_parent(selector);
+    lv_dropdown_open(selector);
+    press("返回");
+    assert(!ut_echo_setup_ui_visible());
+    assert(lv_obj_has_flag(lv_dropdown_get_list(selector), LV_OBJ_FLAG_HIDDEN));
+    for (unsigned index = 0; index < 250; index++) {
+        controls = NULL;
+        press("声学设置");
+        controls = lv_obj_get_parent(selector);
+        lv_dropdown_open(selector);
+        lv_refr_now(display);
+        press("返回");
+        assert(!ut_echo_setup_ui_visible());
+        assert(lv_obj_has_flag(lv_dropdown_get_list(selector), LV_OBJ_FLAG_HIDDEN));
+        assert(calls == 4);
+    }
     lv_deinit();
     puts("ECHO_SETUP_UI_PASS: opening sends nothing; draft edits, expiring double confirmation and explicit review required");
     return 0;

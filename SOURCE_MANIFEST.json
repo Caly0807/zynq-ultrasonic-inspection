@@ -458,8 +458,8 @@
       "sha256": "fe769dd73dae86ffe96cf84fd30d2700bdbafdd21a2fdc742d4362f12c4db5e6"
     },
     "firmware/lvgl_ui/src/ut_echo_setup_ui.c": {
-      "bytes": 10213,
-      "sha256": "0dcd129f0bebb017b3ec231ff2b7c8ebaa0c4aca348130122d8f3585683ce2f4"
+      "bytes": 10272,
+      "sha256": "34deeb5402a9c0056b4b18b0636737e606985e534b7835a7b12da486c892cbb1"
     },
     "firmware/lvgl_ui/src/ut_echo_setup_ui.h": {
       "bytes": 294,
@@ -554,8 +554,8 @@
       "sha256": "b0b6e21a30d936220e92d9674780abb84751316a231f62eacc416b0a0b588fd4"
     },
     "firmware/lvgl_ui/tests/test_echo_setup_ui.c": {
-      "bytes": 4767,
-      "sha256": "4114148769740f94ade8cce93ccebfcf126e8473a0f9b9fe97f02853cc6a41fc"
+      "bytes": 5446,
+      "sha256": "967e2bb85e2ea8e64032c5c219bc73a973ef57e47799b831a684659f8ea69e21"
     },
     "firmware/lvgl_ui/tests/test_fonts.py": {
       "bytes": 1113,
