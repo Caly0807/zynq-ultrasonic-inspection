@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from utinspect.board_health import camera_diagnostics
+from utinspect.basic_vision import parse_frame
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -61,7 +62,11 @@ class NativeCameraTests(unittest.TestCase):
         self.assertEqual(status["dropped_frames"], 2)
         self.assertEqual(status["published_frames"], 1)
         self.assertEqual(status["sequence"], 3)
-        self.assertTrue((directory / "frame.ppm").read_bytes().startswith(b"P6\n# UTCAM1 3 "))
+        data = (directory / "frame.ppm").read_bytes()
+        self.assertTrue(data.startswith(b"P6\n# UTCAM2 3 "))
+        frame = parse_frame(data, status["last_frame_ns"])
+        self.assertIsNotNone(frame.native_marker)
+        self.assertEqual(frame.metadata(status["last_frame_ns"])["marker_backend"], "NATIVE_C")
 
     def test_repeated_bad_frames_have_a_bounded_failure(self):
         result, status, directory = self.run_camera("badframes")

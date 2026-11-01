@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include "ut_red_marker.h"
 
 static volatile sig_atomic_t running = 1;
 static void stop_capture(int signal_number) { (void)signal_number; running = 0; }
@@ -191,7 +192,11 @@ int main(int count, char **arguments)
             int output_descriptor = open(temporary, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW, 0600);
             FILE *output = output_descriptor < 0 ? NULL : fdopen(output_descriptor, "wb");
             if (!output) { int error_number = errno; if (output_descriptor >= 0) close(output_descriptor); capture_error(&status, "OPEN_OUTPUT", error_number); goto cleanup; }
-            bool written = fprintf(output, "P6\n# UTCAM1 %u %llu %llu\n%u %u\n255\n", buffer.sequence, (unsigned long long)now, (unsigned long long)stream_id, width, height) > 0;
+            ut_red_marker_t marker = ut_red_marker(rgb, width, height);
+            bool written = fprintf(output, "P6\n# UTCAM2 %u %llu %llu %u %u %u %u %u\n%u %u\n255\n",
+                                   buffer.sequence, (unsigned long long)now, (unsigned long long)stream_id,
+                                   marker.status, marker.candidate_count, (unsigned)(marker.pixel_x * 1000.0f + .5f),
+                                   (unsigned)(marker.pixel_y * 1000.0f + .5f), marker.area_pixels, width, height) > 0;
             written = fwrite(rgb, 1, (size_t)width * height * 3, output) == (size_t)width * height * 3 && written;
             int closed = fclose(output);
             if (closed || !written || rename(temporary, destination)) { capture_error(&status, "PUBLISH_FRAME", errno ? errno : EIO); goto cleanup; }

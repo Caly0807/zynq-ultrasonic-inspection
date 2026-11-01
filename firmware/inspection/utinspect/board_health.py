@@ -105,6 +105,9 @@ def local_scan_diagnostics(path):
             return unavailable
         safe = {key: record[key] for key in ("schema", "phase", "reason", "updated_monotonic_ns", "sampled_cells", "total_cells",
                                              "valid_cells", "echo_calibrated", "position_accuracy_verified", "no_network_required", "results_volatile")}
+        error = record.get("vision_error", "")
+        if isinstance(error, str) and len(error) <= 160:
+            safe["vision_error"] = "".join(character for character in error if character.isprintable())
         return {**safe, **unavailable, "available": True, "position_mm": position, "diagnostic_age_ms": age // 1_000_000}
     except (OSError, UnicodeError, ValueError, TypeError):
         return unavailable

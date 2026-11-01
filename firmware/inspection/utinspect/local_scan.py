@@ -188,6 +188,7 @@ class LocalScan:
             try:
                 self._mailbox()
                 vision = self.vision.state()
+                now = self.clock()
                 self._record(vision, now)
             except (OSError, ValueError, KeyError, TypeError) as error:
                 self.error, self.reason = str(error), "ERROR"
@@ -195,9 +196,13 @@ class LocalScan:
                     self.phase = "IDLE"
                     self.live.stop()
                 vision = self.vision.state()
-            if not vision.get("preview_available") and self.reason != "ERROR":
+            if self.phase == "IDLE" and self.reason in {"WAITING", "READY", "NO_CAMERA", "NEED_CORNERS"}:
+                self.reason = ("NO_CAMERA" if not vision.get("preview_available") else
+                               "READY" if vision.get("calibrated") else "NEED_CORNERS")
+            elif self.phase == "SCANNING" and not vision.get("preview_available") and self.reason != "ERROR":
                 self.reason = "NO_CAMERA"
             snapshot = self.session.snapshot()
+            now = self.clock()
             live = self.live.state()
             position = vision.get("position_mm")
             flags = (int(bool(vision.get("preview_available"))) | int(bool(vision.get("calibrated"))) << 1 |
@@ -220,6 +225,7 @@ class LocalScan:
                                "sampled_cells": snapshot["sampled_cells"], "total_cells": snapshot["total_cells"],
                                "valid_cells": snapshot["valid_cells"], "coverage_percent": snapshot["grid_coverage_percent"],
                                "echo_calibrated": self.session.echo.calibrated, "position_accuracy_verified": False,
+                               "vision_error": str(vision.get("error", ""))[:160],
                                "timing_basis": TIMING_BASIS, "no_network_required": True, "results_volatile": True}
             atomic_json(self.directory / "scan-status.json", self.last_state)
             if now - self.last_preview >= 500_000_000 and vision.get("preview_available"):
@@ -248,7 +254,7 @@ class LocalScan:
             except (OSError, ValueError, RuntimeError) as error:
                 with self.lock:
                     self.phase, self.reason, self.error = "IDLE", "ERROR", str(error)
-            self.stop_event.wait(.1)
+            self.stop_event.wait(.2)
 
     def close(self):
         self.stop_event.set()

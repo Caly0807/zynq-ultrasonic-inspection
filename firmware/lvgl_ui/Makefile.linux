@@ -11,7 +11,7 @@ APP_OBJECTS := $(patsubst %.c,$(OUT)/%.o,$(APP_SOURCES))
 
 all: $(OUT)/ut_lvgl_linux $(OUT)/ut_uvc_capture
 
-$(OUT)/ut_uvc_capture: ports/ut_uvc_capture.c
+$(OUT)/ut_uvc_capture: ports/ut_uvc_capture.c ports/ut_red_marker.h
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(LDFLAGS) -Wall -Wextra -Werror $< -o $@
 

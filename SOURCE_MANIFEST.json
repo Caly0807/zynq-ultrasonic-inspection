@@ -54,8 +54,8 @@
       "sha256": "85374a3f39000addbbe204ae49de95c5ec1c476165897b9c5e23dfb8cbf8219c"
     },
     "firmware/inspection/docs/OFFLINE_MANUAL_SCAN.md": {
-      "bytes": 3015,
-      "sha256": "2e0d2451154cf00a01cbbe917ca9bee5fb3c48ce1f283e1eb3a64f9d0ab89ef8"
+      "bytes": 3254,
+      "sha256": "119c3b1eb6b1bd62f4ad5eccf1889ccd0f92ad7ac4a6d18b9ba83ef7d802d381"
     },
     "firmware/inspection/docs/manual_mapping_contract.md": {
       "bytes": 12738,
@@ -154,8 +154,8 @@
       "sha256": "c67336df60ae12c338930f550f1f5fc73510217e0a03446592a6b0561eacaf2f"
     },
     "firmware/inspection/tests/test_local_scan.py": {
-      "bytes": 12200,
-      "sha256": "5d0f91223007c56c185d2e75e1aa4fd03cd56f594280d4f64bc3a93f4c90ab5c"
+      "bytes": 14185,
+      "sha256": "cda41a4fcbc0ba6802a31245c1d3ff288beba2fa876584bcd983c2612e1a6668"
     },
     "firmware/inspection/tests/test_mapping.py": {
       "bytes": 8845,
@@ -168,6 +168,10 @@
     "firmware/inspection/tests/test_mapping_web.py": {
       "bytes": 24017,
       "sha256": "5ea9e33c37fbfcdd6c15d8b1c8386f1705053e34194194e976f33ed21720e348"
+    },
+    "firmware/inspection/tests/test_native_marker.py": {
+      "bytes": 2862,
+      "sha256": "9ee6cbe2919be13d86564327c7e9effcf45e34b54dc964b6e51d2db873e03edc"
     },
     "firmware/inspection/tests/test_realtime_web.py": {
       "bytes": 3142,
@@ -186,8 +190,8 @@
       "sha256": "c4c85de85c458085968ff9e13754ce783564fe3257fbf7568b799cd94d67b11e"
     },
     "firmware/inspection/tests/test_uvc_capture.py": {
-      "bytes": 4213,
-      "sha256": "152fd6145e64a4734ee0583d1f147f99d291e27d9a34c86d2a0411673e93e993"
+      "bytes": 4485,
+      "sha256": "ac6b85a5d44aa82e8633ea976f5f1e6e4c981dc5ddaa9e79e0f0539380d762da"
     },
     "firmware/inspection/tests/test_vision_scan.py": {
       "bytes": 10137,
@@ -214,16 +218,16 @@
       "sha256": "39e8dfde67c47e8892876fa881ce79c29f57dd7b1c50efc820a34855fecd217a"
     },
     "firmware/inspection/utinspect/basic_vision.py": {
-      "bytes": 15760,
-      "sha256": "a7e0c8e04dbf4a7fd5e13e6c49f6fa36772339f4659e81defcaf3b4abd59ce78"
+      "bytes": 17535,
+      "sha256": "3a74d13a59b83680c36fa46a627671b4911f6afb6a5d6176896756a0967d5035"
     },
     "firmware/inspection/utinspect/board_capture.py": {
       "bytes": 3631,
       "sha256": "c4cb376bc78c536a25ebb3a9c74363f683146539f5df1134dc8ae19426b655d4"
     },
     "firmware/inspection/utinspect/board_health.py": {
-      "bytes": 10386,
-      "sha256": "e8b3b4dece22e30d17d8de2eef60177bd37c51a506f938a191d181c38e8f543e"
+      "bytes": 10594,
+      "sha256": "6b2a3b302d30fa5b32747ee2a3131b110651dc00834610b71c18dbee365bbdda"
     },
     "firmware/inspection/utinspect/camera.py": {
       "bytes": 7250,
@@ -254,8 +258,8 @@
       "sha256": "19ee0d4ebfc952889560e8d8e6db6bab7a8c72e9814851c801c094b77beb0a5b"
     },
     "firmware/inspection/utinspect/local_scan.py": {
-      "bytes": 14123,
-      "sha256": "a400f52d3abc3b03ebe60686e67ef5988ee4d811fac70e82574c91c047dea027"
+      "bytes": 14584,
+      "sha256": "300d5d2bd70f2ab967f71824dc5bdcd62e1a5a98c5a80b7b33b129d6089c2b63"
     },
     "firmware/inspection/utinspect/mapping.py": {
       "bytes": 18294,
@@ -326,8 +330,8 @@
       "sha256": "1b8faee54aefb4c85b1277eb1c71c0fcf720e7d9d905354293d4e27b03f507c0"
     },
     "firmware/lvgl_ui/Makefile.linux": {
-      "bytes": 1199,
-      "sha256": "e06531de53a38118cac2d5d879ab9776a4728204db412b9b7d9d56dc1d04e07f"
+      "bytes": 1221,
+      "sha256": "b3a788d45797170c849e5f0b68f450cc01633028813310e6ff1bb946218d21f5"
     },
     "firmware/lvgl_ui/assets/noto_license.txt": {
       "bytes": 4301,
@@ -389,9 +393,13 @@
       "bytes": 1334,
       "sha256": "29e4e15508429a1b45a6b571a3ecb2cf95e3f364859a8aff9f29db55a1470f9a"
     },
+    "firmware/lvgl_ui/ports/ut_red_marker.h": {
+      "bytes": 2742,
+      "sha256": "90c9e18eb51c617a5e5fd22fcf3e4dbc8582605a27a2f2298c1ba989f10e6564"
+    },
     "firmware/lvgl_ui/ports/ut_uvc_capture.c": {
-      "bytes": 12376,
-      "sha256": "a7192a5c81c163caba710b3daf4fc051f53d4f020adc4e3e1c8bd2361fbea391"
+      "bytes": 12742,
+      "sha256": "9ff7d436bab1a93e43e240823e7d69c7a3b47d76557a3124e375786dd770a294"
     },
     "firmware/lvgl_ui/ports/zynq_main.c": {
       "bytes": 3863,
@@ -536,6 +544,10 @@
     "firmware/lvgl_ui/tests/test_model.c": {
       "bytes": 2564,
       "sha256": "508d902632e5a7a057abe1166e1213b71d24eb7e9ae7bc470d0b0e5c3470243f"
+    },
+    "firmware/lvgl_ui/tests/test_native_marker.c": {
+      "bytes": 1560,
+      "sha256": "54e0112a2da3d5af033945b16dd97b54cf5458d3b4a67f44b5ae1fc700e95090"
     },
     "firmware/lvgl_ui/tests/test_rgb.c": {
       "bytes": 1219,

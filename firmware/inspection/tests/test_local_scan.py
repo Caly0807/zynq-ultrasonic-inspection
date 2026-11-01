@@ -89,6 +89,50 @@ class LocalScanTests(unittest.TestCase):
         self.assertEqual(self.vision.state()["position_mm"], [39.667, 39.5])
         self.assertFalse(self.live.start.called)
 
+    def test_camera_startup_delay_recovers_without_arming_or_recording(self):
+        self.active = False
+        self.path.unlink()
+        self.assertEqual(self.scan.tick()["reason"], "NO_CAMERA")
+        self.camera(step_ms=200)
+        state = self.scan.tick()
+        self.assertEqual((state["phase"], state["reason"]), ("IDLE", "NEED_CORNERS"))
+        self.assertEqual(state["sampled_cells"], 0)
+        self.live.start.assert_not_called()
+
+    def test_calibrated_camera_recovery_updates_idle_readiness(self):
+        self.calibrate()
+        self.path.unlink()
+        self.assertEqual(self.scan.tick()["reason"], "NO_CAMERA")
+        self.camera(step_ms=200)
+        state = self.scan.tick()
+        self.assertEqual((state["phase"], state["reason"]), ("IDLE", "READY"))
+        self.assertEqual(state["sampled_cells"], 0)
+        self.live.start.assert_not_called()
+
+    def test_camera_loss_and_recovery_preserve_finished_results(self):
+        self.start()
+        self.stable_sample()
+        self.scan.command("scan-finish", {})
+        self.path.unlink()
+        self.assertEqual(self.scan.tick()["reason"], "FINISHED")
+        self.camera(step_ms=200)
+        state = self.scan.tick()
+        self.assertEqual((state["phase"], state["reason"]), ("FINISHED", "FINISHED"))
+        self.assertEqual(state["sampled_cells"], 1)
+        self.assertFalse(self.active)
+        self.live.start.assert_not_called()
+
+    def test_camera_recovery_does_not_clear_explicit_stop_or_error_reasons(self):
+        for reason in ("ERROR", "NEED_LOCAL_LIVE", "CALIBRATION_CHANGED"):
+            with self.subTest(reason=reason):
+                self.scan.reason = reason
+                self.path.unlink()
+                self.assertEqual(self.scan.tick()["reason"], reason)
+                self.camera(step_ms=200)
+                self.assertEqual(self.scan.tick()["reason"], reason)
+                self.assertEqual(self.scan.phase, "IDLE")
+        self.live.start.assert_not_called()
+
     def test_four_corners_cannot_be_implicitly_confirmed(self):
         self.scan.command("freeze", {})
         with self.assertRaises(ValueError):

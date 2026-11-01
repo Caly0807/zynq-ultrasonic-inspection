@@ -25,6 +25,7 @@ class CameraFrame:
     stream_id: int
     source: str
     pixels: bytes
+    native_marker: tuple | None = None
 
     @property
     def frame_id(self):
@@ -33,7 +34,8 @@ class CameraFrame:
     def metadata(self, now):
         return {"frame_id": self.frame_id, "width": self.width, "height": self.height,
                 "sequence": self.sequence, "age_ms": round((now - self.captured_ns) / 1_000_000, 1),
-                "captured_monotonic_ns": self.captured_ns, "stream_id": self.stream_id}
+                "captured_monotonic_ns": self.captured_ns, "stream_id": self.stream_id,
+                "marker_backend": "NATIVE_C" if self.native_marker is not None else "PYTHON_FALLBACK"}
 
 
 def parse_frame(data, now_ns, allow_host_fixture=False):
@@ -44,15 +46,17 @@ def parse_frame(data, now_ns, allow_host_fixture=False):
         raise ValueError("Expected the native camera PPM format")
     tags = lines[1].split()
     dimensions = lines[2].split()
-    if len(tags) != 5 or tags[0] != b"#" or len(dimensions) != 2:
+    if len(tags) not in (5, 10) or tags[0] != b"#" or len(dimensions) != 2:
         raise ValueError("Invalid camera frame metadata")
-    if tags[1] == b"UTCAM1":
+    if tags[1] in (b"UTCAM1", b"UTCAM2"):
         source = "USB_CAMERA"
     elif tags[1] == b"UTHOST1" and allow_host_fixture:
         source = "HOST_FIXTURE"
     else:
         raise ValueError("Unsupported camera source; host fixtures are disabled on the board")
-    values = tags[2:] + dimensions
+    if (tags[1] == b"UTCAM2") != (len(tags) == 10):
+        raise ValueError("Native camera metadata version and length disagree")
+    values = tags[2:5] + dimensions
     if any(not value.isdigit() or len(value) > 20 for value in values):
         raise ValueError("Invalid camera frame integers")
     sequence, captured, stream_id, width, height = map(int, values)
@@ -64,7 +68,19 @@ def parse_frame(data, now_ns, allow_host_fixture=False):
         raise ValueError("Truncated or oversized camera pixel data")
     if not 0 <= now_ns - captured <= MAX_AGE_NS:
         raise ValueError("Camera frame is stale or belongs to a different monotonic clock")
-    return CameraFrame(width, height, sequence, captured, stream_id, source, lines[4])
+    native_marker = None
+    if tags[1] == b"UTCAM2":
+        if any(not value.isdigit() or len(value) > 12 for value in tags[5:]):
+            raise ValueError("Invalid native marker integers")
+        status, candidates, pixel_x, pixel_y, area = map(int, tags[5:])
+        if (status not in (1, 2, 3, 4) or candidates > width * height or area > width * height or
+                pixel_x >= width * 1000 or pixel_y >= height * 1000 or
+                status == 1 and (candidates != 1 or not 6 <= area <= width * height * .12) or
+                status == 2 and candidates != 0 or status == 3 and candidates < 2 or
+                status == 4 and (candidates != 1 or area <= width * height * .12)):
+            raise ValueError("Invalid native marker geometry or classification")
+        native_marker = (status, candidates, pixel_x / 1000.0, pixel_y / 1000.0, area)
+    return CameraFrame(width, height, sequence, captured, stream_id, source, lines[4], native_marker)
 
 
 def png_bytes(frame):
@@ -125,6 +141,13 @@ def project_point(transform, pixel, width, height, length_mm, width_mm):
 
 
 def red_marker(frame):
+    if frame.native_marker is not None:
+        status, candidates, pixel_x, pixel_y, area = frame.native_marker
+        result = {"status": {1: "FOUND", 2: "NOT_FOUND", 3: "AMBIGUOUS", 4: "TOO_LARGE"}[status],
+                  "candidate_count": candidates, "pixel": [pixel_x, pixel_y] if status == 1 else None}
+        if status == 1:
+            result["area_pixels"] = area
+        return result
     step = max(1, math.ceil(max(frame.width, frame.height) / 240))
     columns, rows = frame.width // step, frame.height // step
     mask = bytearray(columns * rows)
@@ -217,6 +240,9 @@ class BasicVision:
                 frame, now = self._current()
                 if self.marker_key != frame.frame_id:
                     self.marker, self.marker_key = red_marker(frame), frame.frame_id
+                now = self.clock()
+                if not 0 <= now - frame.captured_ns <= MAX_AGE_NS:
+                    raise ValueError("Camera processing exceeded the frame freshness limit")
                 marker = dict(self.marker)
                 if marker["pixel"] is not None and self.transform is not None:
                     position = project_point(self.transform, marker["pixel"], frame.width, frame.height, self.length_mm, self.width_mm)
