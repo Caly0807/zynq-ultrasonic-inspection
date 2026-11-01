@@ -7,7 +7,7 @@ STATUSES = {"INVALID": 0, "UNCALIBRATED": 1, "SUSPECT": 2, "NO_INDICATION": 3}
 REASONS = {"insufficient_baseline_select_a_verified_quiet_gate": 1,
            "baseline_gate_outside_acquisition_window": 2, "gate_outside_acquisition_window": 3,
            "adc_overrange_or_clipping": 4, "flaw_gate_threshold_crossed": 5,
-           "no_flaw_gate_indication": 6, "backwall_missing_check_coupling": 7}
+           "no_flaw_gate_indication": 6, "backwall_missing_check_coupling": 7, "calibration_gain_mismatch": 8}
 
 
 def encode_result(frame, diagnosis, config):

@@ -17,7 +17,7 @@ def build_bundle(destination, with_vision=False, with_live=False):
     relative_paths = [f"utinspect/{name}.py" for name in CORE_MODULES + (VISION_MODULES if with_vision else ())]
     relative_paths += ["web/inspection.html", "web/camera_basic.html"] + (["web/workpiece.html"] if with_vision else [])
     if with_live:
-        relative_paths += ["utinspect/live_capture.py", "utinspect/live_service.py", "utinspect/live_result.py", "utinspect/local_scan.py", "web/realtime.html"]
+        relative_paths += ["utinspect/live_capture.py", "utinspect/live_service.py", "utinspect/live_result.py", "utinspect/local_scan.py", "utinspect/echo_setup.py", "web/realtime.html"]
     content = {relative: (source_root / relative).read_bytes() for relative in sorted(relative_paths)}
     manifest = {
         "schema": "ut-board-bundle/1", "with_vision": with_vision,

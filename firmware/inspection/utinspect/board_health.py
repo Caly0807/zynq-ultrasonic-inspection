@@ -133,6 +133,43 @@ def camera_diagnostics(path):
         return unavailable
 
 
+def echo_setup_diagnostics(path):
+    unavailable = {"available": False, "basis": "LOCAL_REFERENCE_REVIEW_NOT_REAL_FLAW_ACCEPTANCE"}
+    try:
+        record = private_status(path)
+        if (record.get("schema") != "ut-echo-setup/1" or
+                record.get("phase") not in ("IDLE", "COLLECTING", "READY", "REJECTED", "APPLYING", "APPLIED") or
+                record.get("reason") not in ("WAITING", "NEED_LOCAL_LIVE", "INVALID_CONFIGURATION", "BACKWALL_MISSING",
+                                             "REFERENCE_FLAW_GATE_CROSSED", "QUIET_GATE_NOISY", "UNSTABLE_REFERENCE",
+                                             "REFERENCE_EXPIRED", "NEW_SESSION_REQUIRED", "PREVIEW_APPLIED", "GAIN_CHANGED",
+                                             "REVIEW_REQUIRED", "CALIBRATION_APPLIED", "CLIPPING")):
+            return unavailable
+        timestamp = record.get("updated_monotonic_ns")
+        if type(timestamp) is not int or not 0 <= time.monotonic_ns() - timestamp <= 3_000_000_000:
+            return unavailable
+        if (type(record.get("collected")) is not int or not 0 <= record["collected"] <= 8 or
+                type(record.get("target")) is not int or record["target"] != 8):
+            return unavailable
+        if any(type(record.get(key)) is not bool for key in ("active_calibrated", "active_baseline_configured", "results_volatile", "real_flaw_detection_verified")):
+            return unavailable
+        if record["results_volatile"] is not True or record["real_flaw_detection_verified"] is not False:
+            return unavailable
+        gain = record.get("gain_code")
+        if gain is not None and (type(gain) is not int or not 0 <= gain <= 224):
+            return unavailable
+        counters = ("reference_peak_flaw_codes", "reference_min_backwall_codes", "reference_noise_codes", "proposed_time_zero_us")
+        for key in counters:
+            value = record.get(key)
+            if type(value) not in (int, float) or not math.isfinite(value) or not (-200 if key == "proposed_time_zero_us" else 0) <= value <= 255:
+                return unavailable
+        safe = {key: record[key] for key in ("schema", "phase", "reason", "updated_monotonic_ns", "collected", "target", "gain_code",
+                                           "active_calibrated", "active_baseline_configured", "results_volatile", "real_flaw_detection_verified", *counters)}
+        safe.update(available=True, basis=unavailable["basis"], diagnostic_age_ms=(time.monotonic_ns() - timestamp) // 1_000_000)
+        return safe
+    except (OSError, UnicodeError, ValueError, TypeError):
+        return unavailable
+
+
 def process_alive(pid_path, expected, proc_root=Path("/proc")):
     try:
         text = Path(pid_path).read_text(encoding="ascii").strip()
@@ -165,6 +202,7 @@ def service_health(directory):
             "camera_diagnostics": camera_diagnostics(root / "vision/status.json"),
             "lcd_diagnostics": lcd_diagnostics(root / "lcd/status.json"),
             "local_scan_diagnostics": local_scan_diagnostics(root / "lcd/scan-status.json"),
+            "echo_setup_diagnostics": echo_setup_diagnostics(root / "lcd/echo-status.json"),
             "opencv_module_present": opencv, "numpy_module_present": numpy,
             "physical_lcd_verified": False, "physical_touch_verified": False,
             "real_capture_verified": False, "persistent_storage_verified": False}

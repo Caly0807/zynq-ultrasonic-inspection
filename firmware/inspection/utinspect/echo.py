@@ -51,6 +51,7 @@ class EchoConfig:
     calibrated: bool = False
     calibration_id: str = ""
     baseline_gate_us: tuple[float, float] | None = None
+    reference_gain_code: int | None = None
 
     def __post_init__(self):
         for gate in (self.flaw_gate_us, self.backwall_gate_us):
@@ -69,6 +70,8 @@ class EchoConfig:
             raise ValueError("Invalid time zero")
         if type(self.calibrated) is not bool:
             raise ValueError("calibrated must be a boolean")
+        if self.reference_gain_code is not None and (type(self.reference_gain_code) is not int or not 0 <= self.reference_gain_code <= 224):
+            raise ValueError("Reference gain must be an integer in 0..0xE0")
         if not isinstance(self.calibration_id, str):
             raise ValueError("calibration_id must be a string")
         if self.calibrated and not self.calibration_id.strip():
@@ -133,6 +136,9 @@ def write_lvgl_csv(path, frame):
 
 def analyze(frame, config):
     result = {"source": frame.source, "frame_id": frame.frame_id, "status": "INVALID", "reason": "", "depth_mm": None, "calibration_id": config.calibration_id, "calibrated": config.calibrated}
+    if config.reference_gain_code is not None and frame.gain != config.reference_gain_code:
+        result["reason"] = "calibration_gain_mismatch"
+        return result
     baseline_samples = frame.samples[max(0, frame.trigger_index - 256):max(0, frame.trigger_index - 8)]
     if config.baseline_gate_us is not None:
         baseline_start, baseline_end = config.baseline_gate_us

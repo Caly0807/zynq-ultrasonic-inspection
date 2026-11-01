@@ -18,6 +18,8 @@
 #include "linux_live.h"
 #include "linux_scan.h"
 #include "ut_local_scan_ui.h"
+#include "linux_echo.h"
+#include "ut_echo_setup_ui.h"
 
 static volatile sig_atomic_t running = 1;
 static uint8_t *pixels;
@@ -83,6 +85,9 @@ static void reload_local_scan(void)
 {
     if (!live_directory) return;
     uint64_t now = monotonic_ns();
+    ut_echo_setup_t echo_state = {0};
+    ut_linux_echo_read(live_directory, now, &echo_state);
+    ut_echo_setup_ui_update(&echo_state);
     ut_local_scan_t state;
     if (!ut_linux_scan_read(live_directory, now, &state)) {
         if (live_requested && now - live_started > 3000000000ULL) live_stop();
@@ -273,6 +278,16 @@ static void handle_local_action(ut_local_action_t action, float position_x, floa
     }
 }
 
+static void handle_echo_action(ut_echo_action_t action, unsigned parameter, float value)
+{
+    if (!live_directory || last_local_scan.phase == 1) {
+        ut_echo_setup_ui_notice("请先结束面扫，再调整声学设置；不会自动停止或重启采集");
+        return;
+    }
+    if (!ut_linux_echo_command(live_directory, action, parameter, value, monotonic_ns()))
+        ut_echo_setup_ui_notice("请求尚未处理或参数不可用，请等待刷新后重试");
+}
+
 static bool save_ppm(const char *path)
 {
     FILE *output = fopen(path, "wb");
@@ -369,6 +384,7 @@ int main(int argument_count, char **arguments)
     if (live_directory) {
         ut_ui_set_live_controls(false);
         ut_local_scan_ui_create(handle_local_action);
+        ut_echo_setup_ui_init(handle_echo_action);
     }
     if (touch_path && !headless_output)
         printf("UT_LINUX_TOUCH identified=%u; physical acceptance still required\n", ut_linux_touch_open(touch_path));

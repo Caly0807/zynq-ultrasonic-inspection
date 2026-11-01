@@ -43,6 +43,8 @@ class LocalScan:
         self.skew_ms = -1.0
         self.sequence = 0
         self.last_state = {}
+        from .echo_setup import EchoSetup
+        self.echo_setup = EchoSetup(directory, session, live, clock=clock)
 
     @staticmethod
     def _key(vision):
@@ -51,9 +53,14 @@ class LocalScan:
                 tuple(tuple(corner) for corner in vision.get("corners") or []))
 
     def command(self, action, payload):
-        if not isinstance(payload, dict):
+        if not isinstance(action, str) or not isinstance(payload, dict):
             raise ValueError("Local scan payload must be an object")
         with self.lock:
+            if action.startswith("echo-"):
+                if self.phase == "SCANNING":
+                    raise ValueError("Finish the scan before changing acoustic setup")
+                self.echo_setup.command(action, payload)
+                return
             if action == "freeze" and not payload:
                 if self.phase == "SCANNING":
                     raise ValueError("Finish scanning before changing camera calibration")
@@ -187,6 +194,7 @@ class LocalScan:
             now = self.clock()
             try:
                 self._mailbox()
+                self.echo_setup.tick()
                 vision = self.vision.state()
                 now = self.clock()
                 self._record(vision, now)

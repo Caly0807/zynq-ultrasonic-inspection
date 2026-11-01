@@ -39,7 +39,7 @@ static bool read_diagnosis(const char *directory, uint32_t sequence, uint64_t ti
         values[index] = little_float(data + 32 + index * 4);
         if (!isfinite(values[index])) return false;
     }
-    if (status > 3 || flags & ~63U || little32(data + 20) > 7 ||
+    if (status > 3 || flags & ~63U || little32(data + 20) > 8 ||
         ((status == UT_DIAG_SUSPECT || status == UT_DIAG_NO_INDICATION) && (flags & 3U) != 3U) ||
         ((flags & 4U) && (!(flags & 1U) || status != UT_DIAG_SUSPECT || values[2] <= 0)) ||
         values[0] < 0 || values[0] > 255 || values[1] < 0 || values[2] < 0 || values[3] < 0 ||

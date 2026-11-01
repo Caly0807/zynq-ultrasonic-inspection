@@ -112,6 +112,18 @@ class LiveAcquisition:
                 return None, None
             return self.owner, waveform
 
+    def configure_echo(self, config):
+        if not isinstance(config, EchoConfig):
+            raise ValueError("Expected validated echo configuration")
+        with self.condition:
+            if self._active() or self.in_flight:
+                raise ValueError("Stop and settle acquisition before changing echo configuration")
+            self.echo = config
+            self.latest = self.latest_waveform = self.latest_diagnosis = None
+            for name in ("live-result.bin", "live.utc2"):
+                (self.directory / name).unlink(missing_ok=True)
+            self.condition.notify_all()
+
     def start_worker(self):
         if self.worker is not None:
             raise ValueError("The acquisition worker can only be started once")
