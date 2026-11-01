@@ -39,9 +39,10 @@ static bool read_diagnosis(const char *directory, uint32_t sequence, uint64_t ti
         values[index] = little_float(data + 32 + index * 4);
         if (!isfinite(values[index])) return false;
     }
-    if (status > 3 || flags & ~63U || little32(data + 20) > 8 ||
+    if (status > 3 || flags & ~127U || little32(data + 20) > 11 ||
         ((status == UT_DIAG_SUSPECT || status == UT_DIAG_NO_INDICATION) && (flags & 3U) != 3U) ||
         ((flags & 4U) && (!(flags & 1U) || status != UT_DIAG_SUSPECT || values[2] <= 0)) ||
+        ((flags & 64U) && ((flags & 1U) || (flags & 10U) != 10U || status != UT_DIAG_UNCALIBRATED || values[2] <= 0)) ||
         values[0] < 0 || values[0] > 255 || values[1] < 0 || values[2] < 0 || values[3] < 0 ||
         values[4] < 0 || values[5] < 0 || values[6] < 0 || values[7] < 0 || values[8] < 0 ||
         values[9] < 1000 || values[9] > 20000) return false;
@@ -49,7 +50,8 @@ static bool read_diagnosis(const char *directory, uint32_t sequence, uint64_t ti
         .baseline_valid = (flags & 2U) != 0, .depth_valid = (flags & 4U) != 0,
         .flaw_crossed = (flags & 8U) != 0, .backwall_visible = (flags & 16U) != 0, .clipped = (flags & 32U) != 0,
         .status = (ut_diagnosis_status_t)status, .reason = little32(data + 20),
-        .baseline = values[0], .noise = values[1], .depth_mm = values[2],
+        .baseline = values[0], .noise = values[1], .depth_mm = (flags & 4U) ? values[2] : 0,
+        .estimated_depth_valid = (flags & 64U) != 0, .estimated_depth_mm = (flags & 64U) ? values[2] : 0,
         .flaw_amplitude = values[3], .flaw_time_us = values[4], .backwall_amplitude = values[5],
         .backwall_time_us = values[6], .reference_thickness_mm = values[7], .time_zero_us = values[8],
         .sound_speed_mps = values[9]};

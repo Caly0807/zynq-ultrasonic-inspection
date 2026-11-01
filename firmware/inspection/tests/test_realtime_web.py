@@ -40,6 +40,18 @@ vm.runInContext('render({available:true,active:true,state:"RUNNING",fresh:true,r
 assert.equal(nodes.get('amplitude').textContent,152);
 assert.equal(nodes.get('depth').textContent,'—');
 assert.equal(nodes.get('empty').style.display,'none');
+vm.runInContext('current.diagnosis={status:"UNCALIBRATED",calibrated:false,reason:"flaw_gate_threshold_crossed",flaw_gate_crossed:true,depth_mm:null,estimated_depth_mm:22.1};render(current)',context);
+assert.equal(nodes.get('diagnosis').textContent,'可疑反射（参考）');
+assert.equal(nodes.get('depth').textContent,'≈ 22.10 mm（参考）');
+vm.runInContext('current.diagnosis.status="INVALID";render(current)',context);
+assert.equal(nodes.get('depth').textContent,'—');
+vm.runInContext('current.diagnosis={status:"UNCALIBRATED",calibrated:false,reason:"normal_reference_overlap",depth_mm:null};render(current)',context);
+assert.equal(nodes.get('diagnosis').textContent,'未见新增反射');
+assert.equal(nodes.get('depth').textContent,'—');
+for(const [reason,label] of [['insufficient_baseline_select_a_verified_quiet_gate','静区未配置'],['baseline_gate_not_quiet','静区噪声过大'],['backwall_missing_check_coupling','未见有效底波']]){
+    vm.runInContext('current.diagnosis={status:"INVALID",calibrated:false,depth_mm:null,reason:'+JSON.stringify(reason)+'};render(current)',context);
+    assert.equal(nodes.get('diagnosis').textContent,label);assert.equal(nodes.get('depth').textContent,'—');
+}
 vm.runInContext('render({available:true,active:false,state:"STOPPED",fresh:false})',context);
 assert.equal(nodes.get('amplitude').textContent,'—');
 assert.equal(nodes.get('sequence').textContent,'—');

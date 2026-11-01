@@ -155,7 +155,9 @@ def red_marker(frame):
         offset = ((row * step + step // 2) * frame.width + step // 2) * 3
         for column in range(columns):
             red, green, blue = frame.pixels[offset:offset + 3]
-            mask[row * columns + column] = red >= 100 and red - green >= 55 and red - blue >= 45 and red > green * 1.45 and red > blue * 1.45
+            mask[row * columns + column] = (red >= 110 and red - green >= 65 and red - blue >= 55 and
+                                           red * 100 > green * 170 and red * 100 > blue * 170 and
+                                           (green - blue) * 100 <= (red - blue) * 15)
             offset += step * 3
     candidates = []
     for start in range(len(mask)):
@@ -164,12 +166,15 @@ def red_marker(frame):
         mask[start] = 0
         queue = deque([start])
         count = sum_x = sum_y = 0
+        minimum_x, minimum_y, maximum_x, maximum_y = columns, rows, 0, 0
         while queue:
             current = queue.popleft()
             row, column = divmod(current, columns)
             count += 1
             sum_x += column
             sum_y += row
+            minimum_x, maximum_x = min(minimum_x, column), max(maximum_x, column)
+            minimum_y, maximum_y = min(minimum_y, row), max(maximum_y, row)
             for next_row, next_column in ((row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)):
                 if 0 <= next_row < rows and 0 <= next_column < columns:
                     target = next_row * columns + next_column
@@ -177,7 +182,9 @@ def red_marker(frame):
                         mask[target] = 0
                         queue.append(target)
         if count >= max(6, columns * rows * .00015):
-            candidates.append({"pixel": [sum_x / count * step + step // 2, sum_y / count * step + step // 2], "area_pixels": count * step * step})
+            extent_x, extent_y = maximum_x - minimum_x + 1, maximum_y - minimum_y + 1
+            if max(extent_x, extent_y) * 10 <= min(extent_x, extent_y) * 18 and count * 100 >= extent_x * extent_y * 50:
+                candidates.append({"pixel": [sum_x / count * step + step // 2, sum_y / count * step + step // 2], "area_pixels": count * step * step})
     if len(candidates) != 1:
         return {"status": "NOT_FOUND" if not candidates else "AMBIGUOUS", "candidate_count": len(candidates), "pixel": None}
     marker = candidates[0]

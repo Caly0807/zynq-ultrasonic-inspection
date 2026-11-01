@@ -21,12 +21,15 @@ static ut_red_marker_t ut_red_marker(const uint8_t *pixels, unsigned width, unsi
         for (unsigned column = 0; column < columns; column++) {
             const uint8_t *pixel = pixels + ((row * step + step / 2U) * width + column * step + step / 2U) * 3U;
             unsigned red = pixel[0], green = pixel[1], blue = pixel[2];
-            mask[row * columns + column] = red >= 100 && red >= green + 55 && red >= blue + 45 && red * 100 > green * 145 && red * 100 > blue * 145;
+            mask[row * columns + column] = red >= 110 && red >= green + 65 && red >= blue + 55 &&
+                red * 100 > green * 170 && red * 100 > blue * 170 &&
+                ((int)green - (int)blue) * 100 <= ((int)red - (int)blue) * 15;
         }
     }
     for (unsigned start = 0; start < columns * rows; start++) {
         if (!mask[start]) continue;
         unsigned head = 0, tail = 1, count = 0, sum_x = 0, sum_y = 0;
+        unsigned minimum_x = columns, minimum_y = rows, maximum_x = 0, maximum_y = 0;
         queue[0] = start;
         mask[start] = 0;
         while (head < tail) {
@@ -34,6 +37,10 @@ static ut_red_marker_t ut_red_marker(const uint8_t *pixels, unsigned width, unsi
             count++;
             sum_x += column;
             sum_y += row;
+            if (column < minimum_x) minimum_x = column;
+            if (column > maximum_x) maximum_x = column;
+            if (row < minimum_y) minimum_y = row;
+            if (row > maximum_y) maximum_y = row;
             unsigned neighbors[4], neighbor_count = 0;
             if (row) neighbors[neighbor_count++] = current - columns;
             if (row + 1 < rows) neighbors[neighbor_count++] = current + columns;
@@ -45,6 +52,10 @@ static ut_red_marker_t ut_red_marker(const uint8_t *pixels, unsigned width, unsi
             }
         }
         if (count >= 6 && (uint64_t)count * 100000 >= (uint64_t)columns * rows * 15) {
+            unsigned extent_x = maximum_x - minimum_x + 1, extent_y = maximum_y - minimum_y + 1;
+            unsigned larger = extent_x > extent_y ? extent_x : extent_y;
+            unsigned smaller = extent_x < extent_y ? extent_x : extent_y;
+            if (larger * 10 > smaller * 18 || count * 100 < extent_x * extent_y * 50) continue;
             result.candidate_count++;
             result.area_pixels = count * step * step;
             result.pixel_x = (float)sum_x / count * step + step / 2U;

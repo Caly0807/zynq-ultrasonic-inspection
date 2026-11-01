@@ -6,7 +6,7 @@
 
 void ut_settings_default(ut_settings_t *settings)
 {
-    *settings = (ut_settings_t){2.5f, 8.0f, 8.5f, 14.0f, 30.0f, 5900.0f, true};
+    *settings = (ut_settings_t){2.5f, 8.4f, 8.5f, 14.0f, 30.0f, 5900.0f, true};
 }
 
 void ut_analyze(const ut_frame_t *frame, const ut_settings_t *settings, ut_metrics_t *metrics)

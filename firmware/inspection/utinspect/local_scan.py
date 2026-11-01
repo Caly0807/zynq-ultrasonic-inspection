@@ -209,7 +209,7 @@ class LocalScan:
                                "READY" if vision.get("calibrated") else "NEED_CORNERS")
             elif self.phase == "SCANNING" and not vision.get("preview_available") and self.reason != "ERROR":
                 self.reason = "NO_CAMERA"
-            snapshot = self.session.snapshot()
+            snapshot = self.session.summary()
             now = self.clock()
             live = self.live.state()
             position = vision.get("position_mm")

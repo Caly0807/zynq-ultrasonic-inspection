@@ -33,6 +33,25 @@ class LiveResultTests(unittest.TestCase):
         self.assertAlmostEqual(fields[9], 12)
         self.assertAlmostEqual(fields[14], 30.09, places=4)
 
+    def test_noisy_quiet_gate_has_a_distinct_lcd_reason(self):
+        fields = RESULT.unpack(encode_result(self.frame(), self.diagnosis(reason="baseline_gate_not_quiet"), EchoConfig()))
+        self.assertEqual(fields[3], 0)
+        self.assertEqual(fields[5], 9)
+
+    def test_estimated_depth_has_a_separate_flag_and_never_sets_approved_depth(self):
+        diagnosis = self.diagnosis(status="UNCALIBRATED", baseline=127, noise_codes=1.5,
+                                  flaw_gate_crossed=True, estimated_depth_mm=22.1, estimated_time_zero_us=.55)
+        fields = RESULT.unpack(encode_result(self.frame(), diagnosis, EchoConfig()))
+        self.assertEqual(fields[3], 1)
+        self.assertEqual(fields[4] & 64, 64)
+        self.assertEqual(fields[4] & 5, 0)
+        self.assertAlmostEqual(fields[9], 22.1, places=4)
+        self.assertAlmostEqual(fields[-2], .55, places=4)
+        for changes in ({"calibrated": True}, {"status": "INVALID"}, {"flaw_gate_crossed": False},
+                        {"estimated_depth_mm": float("nan")}, {"estimated_depth_mm": -2}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                encode_result(self.frame(), {**diagnosis, **changes}, EchoConfig())
+
     def test_no_test_passive_demo_or_uncalibrated_final_results(self):
         for mode in ("TEST", "PASSIVE"):
             with self.subTest(mode=mode), self.assertRaises(ValueError):

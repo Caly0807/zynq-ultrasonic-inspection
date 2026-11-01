@@ -9,9 +9,11 @@ typedef enum { UT_SOURCE_WAITING, UT_SOURCE_RECORDED, UT_SOURCE_LIVE, UT_SOURCE_
 typedef enum { UT_DIAG_INVALID, UT_DIAG_UNCALIBRATED, UT_DIAG_SUSPECT, UT_DIAG_NO_INDICATION } ut_diagnosis_status_t;
 typedef struct {
     bool present, calibrated, baseline_valid, depth_valid, flaw_crossed, backwall_visible, clipped;
+    bool estimated_depth_valid;
     ut_diagnosis_status_t status;
     uint32_t reason;
     float baseline, noise, depth_mm, flaw_amplitude, flaw_time_us;
+    float estimated_depth_mm;
     float backwall_amplitude, backwall_time_us, reference_thickness_mm, time_zero_us, sound_speed_mps;
 } ut_diagnosis_t;
 typedef struct {

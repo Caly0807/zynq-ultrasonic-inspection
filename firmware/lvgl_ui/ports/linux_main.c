@@ -66,7 +66,7 @@ static void reload_live(void)
     if (live_requested && now - last_keepalive >= 250000000ULL) {
         if (!ut_linux_live_command(live_directory, "keepalive", live_owner, 128, now)) {
             live_stop();
-            ut_ui_notify("Live keepalive failed / capture stopped");
+            ut_ui_notify("采集连接中断，已请求停止；请重新开始检测");
         }
         last_keepalive = now;
     }
@@ -198,33 +198,33 @@ static void handle_action(ut_action_t action)
         uint64_t now = monotonic_ns();
         if (live_requested) {
             live_stop();
-            ut_ui_notify("Capture stop requested / no automatic restart");
+            ut_ui_notify("已请求停止检测；再次检测需手动开始");
         } else if (!confirmation_deadline || now > confirmation_deadline) {
             confirmation_deadline = now + 5000000000ULL;
-            ut_ui_notify("Probe coupled and safe to pulse? Press LIVE again within 5 seconds.");
+            ut_ui_notify("探头耦合后，5秒内再按开始检测；高压由物理开关控制");
         } else if (ut_ui_is_paused()) {
-            ut_ui_notify("Resume the display before explicitly starting live capture");
+            ut_ui_notify("请先恢复显示，再按开始检测");
         } else if (ut_linux_live_command(live_directory, "start", live_owner, 128, now)) {
             live_requested = true;
             confirmation_deadline = 0;
             last_keepalive = now;
             live_started = now;
             ut_ui_set_live_controls(true);
-            ut_ui_notify("Guarded real ADC requested / STOP or pause ends acquisition");
-        } else ut_ui_notify("Live request failed / no trigger requested");
+            ut_ui_notify("已请求真实波形；停止检测或暂停显示将结束采集");
+        } else ut_ui_notify("启动请求未提交，请等待刷新后重试");
     } else if (action == UT_ACTION_DEMO && allow_demo) {
         ut_generate_demo(&frame, milliseconds() / 250U, true);
         strcpy(frame.source_name, "Linux / synthetic DEMO / HV OFF");
         ut_ui_update(&frame);
     } else if (action == UT_ACTION_OPEN || action == UT_ACTION_SCAN_OPEN) {
         reload_files();
-        ut_ui_notify("Board service files refreshed / no hardware trigger");
+        ut_ui_notify("已刷新板端数据");
     } else if (action == UT_ACTION_WAIT) {
         memset(&frame, 0, sizeof(frame));
         frame.source = UT_SOURCE_WAITING;
         ut_ui_update(&frame);
     } else if (action == UT_ACTION_EXPORT) {
-        ut_ui_notify("Export the complete report from the PC dashboard");
+        ut_ui_notify("请在电脑上位机导出完整报告");
     } else if (action >= UT_ACTION_TOUCH_RETRY && action <= UT_ACTION_TOUCH_RESET) {
         ut_linux_touch_action(action);
     }

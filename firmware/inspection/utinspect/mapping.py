@@ -76,12 +76,13 @@ def envelope(frame, bins=256):
 
 
 class MapSession:
-    def __init__(self, directory, spec=None, echo=None, mode="RECORDED"):
+    def __init__(self, directory, spec=None, echo=None, mode="RECORDED", *, normal_reference=None):
         if mode not in ("DEMO", "RECORDED", "LIVE"):
             raise ValueError("Unknown map acquisition mode")
         self.root = Path(directory).resolve()
         self.spec = spec or MapSpec()
         self.echo = echo or EchoConfig()
+        self.normal_reference = normal_reference
         self.mode = mode
         if mode != "DEMO" and self.echo.calibration_id.startswith("DEMO"):
             raise ValueError("DEMO calibration cannot authorize real measurements")
@@ -93,6 +94,7 @@ class MapSession:
         self.bridge_error = ""
         self.display_directory = None
         self.lock = threading.RLock()
+        self._summary = {}
         self.root.mkdir(parents=True, exist_ok=False)
         (self.root / "waveforms").mkdir()
         self._commit()
@@ -121,7 +123,7 @@ class MapSession:
                     raise ValueError("LIVE mapping requires a fresh same-host acquisition timestamp")
             if visual_evidence is not None:
                 self._validate_visual_evidence(frame, visual_evidence)
-            diagnosis = analyze(frame, self.echo)
+            diagnosis = analyze(frame, self.echo, self.normal_reference)
             status = normalized_status(diagnosis)
             depth = diagnosis["depth_mm"]
             depth_reason = "NO_CALIBRATED_SUSPECT"
@@ -201,6 +203,7 @@ class MapSession:
             return {"schema": "ut-manual-map/1", "session_id": self.session_id,
                     "created_unix_ns": self.created_unix_ns, "source": self.mode, "spec": asdict(self.spec),
                     "echo": asdict(self.echo), "columns": self.spec.columns, "rows": self.spec.rows,
+                    "normal_reference_id": self.normal_reference.reference_id if self.normal_reference is not None else None,
                     "position_basis": "CAMERA_MARKER_ESTIMATE_UNVERIFIED" if any("visual_evidence" in point for point in self.points) else "OPERATOR_ENTERED_WORKPIECE_MM_UNVERIFIED",
                     "coverage_basis": "SAMPLED_GRID_CELLS_NOT_PHYSICAL_BEAM_COVERAGE",
                     "point_count": len(self.points), "sampled_cells": visited, "total_cells": len(cells),
@@ -213,11 +216,16 @@ class MapSession:
                     "reconstruction": "INDICATION_POINTS_ONLY_NOT_HOLE_SHAPE_OR_CT",
                     "cells": cells, "points": list(self.points)}
 
+    def summary(self):
+        return dict(self._summary)
+
     def _commit(self):
         snapshot = self.snapshot()
         temporary = self.root / "map.csv.tmp"
         temporary.write_text(embedded_csv(snapshot), encoding="ascii")
-        atomic_json(self.root / "session.json", snapshot)
+        atomic_json(self.root / "session.json", snapshot, compact=True)
+        self._summary = {key: snapshot[key] for key in ("session_id", "point_count", "sampled_cells", "total_cells",
+                         "valid_cells", "suspect_cells", "depth_point_count", "grid_coverage_percent")}
         try:
             temporary.replace(self.root / "map.csv")
             self.bridge_error = ""
@@ -237,10 +245,11 @@ class MapSession:
 
     def begin_new(self):
         with self.lock:
-            incoming = MapSession(self.root.parent / ("session_" + uuid.uuid4().hex), self.spec, self.echo, self.mode)
+            incoming = MapSession(self.root.parent / ("session_" + uuid.uuid4().hex), self.spec, self.echo, self.mode,
+                                  normal_reference=self.normal_reference)
             if self.display_directory is not None:
                 incoming.bind_local_display(self.display_directory)
-            for name in ("root", "session_id", "created_unix_ns", "points", "frame_ids", "submission_ids", "bridge_error"):
+            for name in ("root", "session_id", "created_unix_ns", "points", "frame_ids", "submission_ids", "bridge_error", "_summary"):
                 setattr(self, name, getattr(incoming, name))
             return self.snapshot()
 

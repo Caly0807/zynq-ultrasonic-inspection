@@ -56,6 +56,24 @@ class LiveServiceTests(unittest.TestCase):
         self.assertEqual(self.fake.calls, 0)
         self.assertFalse((Path(self.directory.name) / "live.utc2").exists())
 
+    def test_waveform_snapshot_is_read_only_consistent_and_never_uses_a_stopped_frame(self):
+        with self.assertRaisesRegex(ValueError, "No fresh"):
+            self.service.waveform_snapshot()
+        self.assertEqual(self.fake.calls, 0)
+        self.service.start(self.payload())
+        self.service.capture("snapshot-fixture", threading.Event())
+        with self.service.condition:
+            calls, deadline = self.fake.calls, self.service.lease_deadline
+            snapshot = self.service.waveform_snapshot()
+            self.assertEqual(snapshot["samples"], list(self.service.latest.samples))
+            self.assertEqual(snapshot["record"], self.service.latest.record())
+            self.assertEqual(snapshot["frame_id"], self.service.latest_waveform.frame_id)
+            self.assertEqual(self.fake.calls, calls)
+            self.assertEqual(self.service.lease_deadline, deadline)
+        self.service.stop()
+        with self.assertRaisesRegex(ValueError, "No fresh"):
+            self.service.waveform_snapshot()
+
     def test_start_rejects_missing_confirmations_unsafe_gain_and_invalid_owner(self):
         for change in ({"probe_coupled": False}, {"safe_to_pulse": False}, {"gain": 225},
                        {"gain": True}, {"owner": "pc"}, {"owner": "lcd-../unsafe"}):

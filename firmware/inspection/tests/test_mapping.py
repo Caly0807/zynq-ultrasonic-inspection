@@ -1,6 +1,7 @@
 import json
 import math
 import tempfile
+import threading
 import time
 import unittest
 from dataclasses import replace
@@ -41,6 +42,33 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(state["sampled_cells"], 0)
         self.assertEqual(state["grid_coverage_percent"], 0)
         self.assertTrue(all(cell["status"] == "UNSCANNED" for cell in state["cells"]))
+
+    def test_committed_summary_does_not_wait_for_the_map_persistence_lock(self):
+        session = self.session()
+        completed = threading.Event()
+        result = []
+        def read_summary():
+            result.append(session.summary())
+            completed.set()
+        with session.lock:
+            worker = threading.Thread(target=read_summary, daemon=True)
+            worker.start()
+            self.assertTrue(completed.wait(1), "Status heartbeat must not wait for map JSON persistence")
+        worker.join(1)
+        self.assertEqual(result[0]["point_count"], 0)
+        session.add(self.frame(), 20, 20, True)
+        self.assertEqual(session.summary()["point_count"], 1)
+        self.assertEqual(session.summary()["sampled_cells"], 1)
+        result[0]["point_count"] = 900
+        self.assertEqual(session.summary()["point_count"], 1)
+
+    def test_new_session_resets_the_committed_summary(self):
+        session = self.session()
+        session.add(self.frame(), 20, 20, True)
+        previous = session.summary()["session_id"]
+        session.begin_new()
+        self.assertNotEqual(session.summary()["session_id"], previous)
+        self.assertEqual(session.summary()["point_count"], 0)
 
     def test_point_preserves_waveform_depth_and_unknown_hole_dimensions(self):
         session = self.session()

@@ -165,7 +165,6 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                 return
             route = urlsplit(self.path)
             try:
-                snapshot = session.snapshot()
                 if route.path == "/":
                     self.send_data((ROOT / "web/inspection.html").read_bytes(), "text/html; charset=utf-8")
                 elif route.path == "/vision" and vision is not None:
@@ -176,6 +175,7 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                     frame_id = parse_qs(route.query).get("frame_id", [None])[0]
                     self.send_data(vision.frame_png(frame_id), "image/png")
                 elif route.path == "/api/state":
+                    snapshot = session.snapshot()
                     state = {**snapshot, "capture_adapter_configured": capture is not None, "stopped": stopped.is_set()}
                     if device_status is not None:
                         state["device"] = device_status() if callable(device_status) else device_status
@@ -184,20 +184,25 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                     self.send_json(device_status() if callable(device_status) else device_status)
                 elif route.path == "/api/live" and live is not None:
                     self.send_json(live.state())
+                elif route.path == "/api/live/waveform" and live is not None:
+                    self.send_json(live.waveform_snapshot())
                 elif route.path == "/live" and live is not None:
                     self.send_data((ROOT / "web/realtime.html").read_bytes(), "text/html; charset=utf-8")
                 elif route.path == "/api/waveform":
                     point_id = parse_qs(route.query).get("point_id", [""])[0]
                     self.send_json(session.waveform(point_id))
                 elif route.path == "/export/session.json":
+                    snapshot = session.snapshot()
                     self.send_data(json.dumps(snapshot, ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8"),
                                    "application/json; charset=utf-8", filename="inspection_session.json")
                 elif route.path == "/export/map.csv":
+                    snapshot = session.snapshot()
                     self.send_data(embedded_csv(snapshot).encode("ascii"), "text/csv; charset=ascii", filename="map.csv")
                 elif route.path == "/export/waveform.csv":
                     point_id = parse_qs(route.query).get("point_id", [""])[0]
                     self.send_data(session.waveform_csv(point_id), "text/csv; charset=ascii", filename="waveform.csv")
                 elif route.path == "/export/report.html":
+                    snapshot = session.snapshot()
                     self.send_data(render_dashboard(snapshot).encode("utf-8"), "text/html; charset=utf-8", filename="inspection_report.html")
                 else:
                     self.send_json({"error": "Unknown endpoint"}, 404)

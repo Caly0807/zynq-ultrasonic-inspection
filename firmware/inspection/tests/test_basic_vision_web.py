@@ -13,9 +13,10 @@ let input = '';
 process.stdin.setEncoding('utf8');process.stdin.on('data', chunk => input += chunk);
 process.stdin.on('end', async () => {
   try {
-    const fixture = JSON.parse(input), nodes = new Map(), operations = [], timers = [];
+    const fixture = JSON.parse(input), nodes = new Map(), operations = [], timers = [], markerArcs = [];
     const drawings = new Proxy({}, {get: (target, key) => target[key] || ((...arguments) => {
       for (const value of arguments) if (typeof value === 'number') assert(Number.isFinite(value), key);
+      if(key==='arc'&&arguments[2]===14)markerArcs.push(arguments);
     })});
     function element(identifier) {
       return {identifier, style:{}, checked:false, disabled:false, textContent:'', className:'', events:{},
@@ -61,6 +62,10 @@ process.stdin.on('end', async () => {
     assert.equal(nodes.get('positionX').textContent,'40.0');assert(nodes.get('resume').disabled);
     current.frame.frame_id='camera-2';current.marker={status:'AMBIGUOUS',pixel:null};current.position_mm=null;
     await refresh();assert.equal(nodes.get('positionX').textContent,'—');assert(nodes.get('status').textContent.includes('多个'));
+    const previousArcs=markerArcs.length;
+    for(const status of ['NOT_FOUND','AMBIGUOUS','OUTSIDE_WORKPIECE']){
+      current.marker={status,pixel:[320,240]};await refresh();assert.equal(markerArcs.length,previousArcs);
+    }
     current.source='HOST_FIXTURE';await refresh();assert(nodes.get('source').textContent.includes('非相机'));
     failed=true;await refresh();assert.equal(nodes.get('positionX').textContent,'—');assert(nodes.get('save').disabled);
     assert.equal(nodes.get('placeholder').style.display,'grid');assert(nodes.get('status').textContent.includes('Device login required'));

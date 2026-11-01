@@ -4,7 +4,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from utinspect.echo import EchoConfig, Waveform, analyze, load_csv, synthetic_waveform, write_lvgl_csv
+from utinspect.echo import EchoConfig, Waveform, analyze, live_echo_config, load_csv, synthetic_waveform, write_lvgl_csv
 
 
 class EchoTests(unittest.TestCase):
@@ -57,6 +57,66 @@ class EchoTests(unittest.TestCase):
     def test_gates_outside_frame_rejected(self):
         frame = Waveform((128,) * 64, 32, 0.04, "RECORDED")
         self.assertEqual(analyze(frame, self.approved)["status"], "INVALID")
+
+    def test_live_default_has_a_quiet_gate_without_approving_calibration(self):
+        original = synthetic_waveform(25)
+        frame = replace(original, samples=original.samples[256:] + (128,) * 256, trigger_index=0, source="LIVE")
+        result = analyze(frame, live_echo_config())
+        self.assertEqual(result["status"], "UNCALIBRATED")
+        self.assertTrue(result["flaw_gate_crossed"])
+        self.assertIsNone(result["depth_mm"])
+        self.assertFalse(result["calibrated"])
+
+    def test_live_default_does_not_invent_an_echo_for_a_flat_adc_frame(self):
+        frame = Waveform((127, 128, 129, 128) * 1024, 0, .04, "LIVE")
+        result = analyze(frame, live_echo_config())
+        self.assertEqual(result["status"], "INVALID")
+        self.assertEqual(result["reason"], "backwall_missing_check_coupling")
+
+    def test_live_default_respects_an_explicit_gate_and_does_not_change_recorded_defaults(self):
+        self.assertIsNone(EchoConfig().baseline_gate_us)
+        self.assertIsNone(live_echo_config({"baseline_gate_us": None}).baseline_gate_us)
+        self.assertEqual(live_echo_config({"baseline_gate_us": [120., 130.]}).baseline_gate_us, [120., 130.])
+
+    def test_echo_or_broad_noise_inside_quiet_gate_is_not_an_approved_baseline(self):
+        frame = Waveform((128,) * 4096, 0, .04, "LIVE")
+        for samples in ([*frame.samples[:2600], 180, *frame.samples[2601:]],
+                        [*frame.samples[:2500], *([118, 138] * 126), *frame.samples[2752:]]):
+            with self.subTest(peak=max(samples)):
+                result = analyze(replace(frame, samples=tuple(samples)), live_echo_config({"baseline_gate_us": (100., 110.)}))
+                self.assertEqual(result["status"], "INVALID")
+                self.assertEqual(result["reason"], "baseline_gate_not_quiet")
+                self.assertIsNone(result["depth_mm"])
+
+    def test_live_adaptive_baseline_avoids_a_tail_echo_without_approving_calibration(self):
+        samples = [128] * 4096
+        samples[140], samples[268] = 190, 200
+        for index in range(3500, 3750):
+            samples[index] = 108 if index % 2 else 148
+        result = analyze(Waveform(tuple(samples), 0, .04, "LIVE"), live_echo_config())
+        self.assertEqual(result["status"], "UNCALIBRATED")
+        self.assertEqual(result["baseline"], 128)
+        self.assertEqual(result["baseline_strategy"], "QUIET_SUBWINDOW")
+        quiet_start, quiet_end = result["baseline_gate_used_us"]
+        self.assertTrue(quiet_end < 140 or quiet_start > 149)
+        self.assertIsNone(result["depth_mm"])
+
+    def test_live_adaptive_baseline_rejects_noise_across_the_entire_search_gate(self):
+        samples = [128] * 4096
+        samples[140], samples[268] = 190, 200
+        for index in range(500, 4001):
+            samples[index] = 108 if index % 2 else 148
+        result = analyze(Waveform(tuple(samples), 0, .04, "LIVE"), live_echo_config())
+        self.assertEqual(result["status"], "INVALID")
+        self.assertEqual(result["reason"], "baseline_gate_not_quiet")
+
+    def test_live_flaw_gate_includes_the_recorded_22mm_arrival_time(self):
+        samples = [128] * 4096
+        samples[203], samples[268] = 190, 200
+        result = analyze(Waveform(tuple(samples), 0, .04, "LIVE"), live_echo_config())
+        self.assertEqual(result["status"], "UNCALIBRATED")
+        self.assertTrue(result["flaw_gate_crossed"])
+        self.assertAlmostEqual(result["flaw"]["time_us"], 8.12)
 
     def test_bad_configuration_rejected(self):
         for values in ({"calibrated": True}, {"minimum_snr": float("nan")}, {"flaw_gate_us": (8., 9.)},

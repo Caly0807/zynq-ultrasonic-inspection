@@ -1,6 +1,6 @@
 {
   "schema": "ut-public-source-candidate/1",
-  "source_date": "2026-11-01",
+  "source_date": "2026-11-02",
   "status": "DRAFT_NOT_PUBLISHED",
   "license_selected": true,
   "github_publish_approved": false,
@@ -9,10 +9,13 @@
   "physical_touch_verified": false,
   "real_ultrasound_closed_loop_verified": false,
   "excluded_test_modules": [
+    "test_board_bundle.py",
     "test_board_network_guard.py",
     "test_busybox_runtime.py",
+    "test_display_inspection.py",
     "test_ethernet_probe.py",
     "test_jtag_image_audit.py",
+    "test_jtag_ps_start.py",
     "test_linux_boot_tools.py",
     "test_public_source.py",
     "test_reference_capture_tools.py",
@@ -21,9 +24,13 @@
     "test_specimen_baseline.py"
   ],
   "files": {
+    ".gitattributes": {
+      "bytes": 19,
+      "sha256": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c"
+    },
     ".github/workflows/source-tests.yml": {
-      "bytes": 1186,
-      "sha256": "9b99de76e96af4be7e20de48ce5832d65a595e21ade103fbc91a63f7becf18bb"
+      "bytes": 1829,
+      "sha256": "50d2d96c9203f8ed05fda5ef2d60c4590cf09c6f199668317ae918700140e6a0"
     },
     "LICENSE": {
       "bytes": 1096,
@@ -42,8 +49,8 @@
       "sha256": "bab2929ad04fa8a155b0c745ce53f910d7c77d937d8d4fdb010e52c7a82bdf14"
     },
     "README.md": {
-      "bytes": 8071,
-      "sha256": "f9bf13d35b490d667de115a9c5d91cb25ddc4336cf4a4254bbad17fb167b33af"
+      "bytes": 10146,
+      "sha256": "526149e5b7f191b1256859f4f6039cfbce576019956f23e2c864cd6e99e776ec"
     },
     "SAFETY.md": {
       "bytes": 1632,
@@ -53,9 +60,13 @@
       "bytes": 1314,
       "sha256": "85374a3f39000addbbe204ae49de95c5ec1c476165897b9c5e23dfb8cbf8219c"
     },
+    "docs/FAST_ACCEPTANCE_RECORDING.md": {
+      "bytes": 3474,
+      "sha256": "f8973df2c20a77a47f8d014d00bb46e073e831e970f4cc194dd9141f2699d0a1"
+    },
     "firmware/inspection/docs/ACOUSTIC_SETUP.md": {
-      "bytes": 5933,
-      "sha256": "5ea5c26a4aa466900fd4e783f912b3dc09f611735135842a2b995ead7ea43630"
+      "bytes": 6201,
+      "sha256": "baa99bac6eb58b8d72427c4cf7ed6a860f1f36adf3d1774fb7641edac16b4125"
     },
     "firmware/inspection/docs/OFFLINE_MANUAL_SCAN.md": {
       "bytes": 3578,
@@ -98,20 +109,16 @@
       "sha256": "e77254dfa3900db14cfe8a17dae53f9ab3294bd111c5c323ba475209b3fc004a"
     },
     "firmware/inspection/tests/test_basic_vision.py": {
-      "bytes": 16207,
-      "sha256": "6d3b95fb7b2561321ba2305e160dd2e8f67678431124c78bd6c5252ee7e314d7"
+      "bytes": 17370,
+      "sha256": "90222a5695d38e341b5a1615b1d4a293b16da15d788d3b097a74a5763ec574ac"
     },
     "firmware/inspection/tests/test_basic_vision_web.py": {
-      "bytes": 6892,
-      "sha256": "2da29b1ca6dcc46988d059b5d6e282d154af7397ffdd8420ed8c7b0b60950630"
+      "bytes": 7205,
+      "sha256": "b22623fb0b7f0323c29fb8a3b24177e3f8f704eb4d301f4daa95046c980fb323"
     },
     "firmware/inspection/tests/test_board_acceptance.py": {
       "bytes": 3819,
       "sha256": "00fb26b1dd369f4c43f3f31ce8c5d44ca4359a6f7e7f82c846a5b335a99ad7d5"
-    },
-    "firmware/inspection/tests/test_board_bundle.py": {
-      "bytes": 3804,
-      "sha256": "2b8f9217873840ea1d8080bf4ab41693d3e1cffd75a4068d470a23109c2c5255"
     },
     "firmware/inspection/tests/test_camera.py": {
       "bytes": 5298,
@@ -130,8 +137,12 @@
       "sha256": "5db37cde7b3c86f94a334245667b7e55214578fc8f46966e8b75b3c27baebb63"
     },
     "firmware/inspection/tests/test_echo.py": {
-      "bytes": 5014,
-      "sha256": "e717a7acb4c55515490963a9615b3b68951b60d2355d119748ad629b2ccc8cae"
+      "bytes": 8490,
+      "sha256": "d8bded805a39670c49741ab9c44fc70c0c87afb5edcd0ede15552c50784f5658"
+    },
+    "firmware/inspection/tests/test_echo_reference.py": {
+      "bytes": 3447,
+      "sha256": "48519d9e9063ff2ef17d36ff9c75566e9416512dd6401cee90d30b4f410fb5bd"
     },
     "firmware/inspection/tests/test_echo_setup.py": {
       "bytes": 10340,
@@ -146,28 +157,32 @@
       "sha256": "8240385b9f32f3a69b703450e7792290807914835a554485ffc2186340995108"
     },
     "firmware/inspection/tests/test_live_http.py": {
-      "bytes": 3336,
-      "sha256": "90a3dcbb2008ed56f5832c0f8e0755cc5943ddc9ea734c2d6b8ab51720b20fe9"
+      "bytes": 4120,
+      "sha256": "c7e07c0fc5b834a263bbccbd6f706f1d72a7096983a2d959c3a26253978ba0a3"
     },
     "firmware/inspection/tests/test_live_result.py": {
-      "bytes": 2298,
-      "sha256": "0468bc844d19b087d9d0eb840837a0db80f7379ae37b6514d61a39c75e924a03"
+      "bytes": 3532,
+      "sha256": "f7e6ce7b59f2664f3e408f642e817f6dc39995e433ece94b6b04fe7b79ea6571"
     },
     "firmware/inspection/tests/test_live_service.py": {
-      "bytes": 6297,
-      "sha256": "89c753bbba891e7d9bfae2749621f920b9ad5135d26b758f570636fac2983020"
+      "bytes": 7330,
+      "sha256": "5427691dc889f0bd030233f0bd935e63610060cc73c8eb3b29a66139449972b5"
     },
     "firmware/inspection/tests/test_local_display_independent.py": {
       "bytes": 2048,
       "sha256": "c67336df60ae12c338930f550f1f5fc73510217e0a03446592a6b0561eacaf2f"
+    },
+    "firmware/inspection/tests/test_local_inspection_workflow.py": {
+      "bytes": 6240,
+      "sha256": "25dedd50f07fd62070b3251aa7f04331fa097b62cdaeed2bae8db0d8c82f461a"
     },
     "firmware/inspection/tests/test_local_scan.py": {
       "bytes": 14185,
       "sha256": "cda41a4fcbc0ba6802a31245c1d3ff288beba2fa876584bcd983c2612e1a6668"
     },
     "firmware/inspection/tests/test_mapping.py": {
-      "bytes": 8845,
-      "sha256": "38e8bfd33bb3ab5641353a1f5242ef89ec36afc857aa74a209d8c3199306248c"
+      "bytes": 10075,
+      "sha256": "f263faa55b65b58d02ac558c2b7693a7e52dd2ddda2e9b12674d745f5224a185"
     },
     "firmware/inspection/tests/test_mapping_app.py": {
       "bytes": 17920,
@@ -182,8 +197,8 @@
       "sha256": "9ee6cbe2919be13d86564327c7e9effcf45e34b54dc964b6e51d2db873e03edc"
     },
     "firmware/inspection/tests/test_realtime_web.py": {
-      "bytes": 3142,
-      "sha256": "540ab6cbdc64b1bf1f7cff11d5ae6563cfda1ff3ae004312bc8d72a75eb51b59"
+      "bytes": 4372,
+      "sha256": "cb75b85d42c5bac6975b3710821a886453fd2e5a6dcff8ca8b57a157d8c349b3"
     },
     "firmware/inspection/tests/test_reference_audit.py": {
       "bytes": 3472,
@@ -230,8 +245,8 @@
       "sha256": "39e8dfde67c47e8892876fa881ce79c29f57dd7b1c50efc820a34855fecd217a"
     },
     "firmware/inspection/utinspect/basic_vision.py": {
-      "bytes": 17535,
-      "sha256": "3a74d13a59b83680c36fa46a627671b4911f6afb6a5d6176896756a0967d5035"
+      "bytes": 18121,
+      "sha256": "4ca44e6f7e1ce1a76243209a06afe089ffcf933cf56106a13eb1d00f48142d20"
     },
     "firmware/inspection/utinspect/board_capture.py": {
       "bytes": 3631,
@@ -246,52 +261,56 @@
       "sha256": "b206f3707728de3e17ff7b6eba3954dcbc7f5b8fad8f2caa9d22fd70f7aad4f4"
     },
     "firmware/inspection/utinspect/device_app.py": {
-      "bytes": 9438,
-      "sha256": "52c9324d2f94c3cdb7ede02257a468d9b3e7810314c0417de39ae789833e8185"
+      "bytes": 10311,
+      "sha256": "c423aa18e144790aa6ae21df8a189eab2fa58dae294ace621070739ae4bb6e1e"
     },
     "firmware/inspection/utinspect/device_vision.py": {
       "bytes": 4297,
       "sha256": "eca31de2a4c6dbf2d5b3ff81ccbdf511e5e207e13242ea3290d04c5e6cf5eb91"
     },
     "firmware/inspection/utinspect/echo.py": {
-      "bytes": 11235,
-      "sha256": "8a8fc91a2055b06bfbaa2522e0c8843b4bcec5f3e64b09ce7a244a243bc5ba11"
+      "bytes": 15115,
+      "sha256": "d5ca05278810892fce1ce9cf2e2ea63b202896de33fb578eda4b803d9644c8a9"
+    },
+    "firmware/inspection/utinspect/echo_reference.py": {
+      "bytes": 3874,
+      "sha256": "343b0a0b319e3b5ed73562bb18c8a7dcf977d850db1e55f62d979731187be455"
     },
     "firmware/inspection/utinspect/echo_setup.py": {
-      "bytes": 12697,
-      "sha256": "7cf58841b7af35d4caf77f9bf10da93dea2714906770d0c41d4a149aac1ce3fc"
+      "bytes": 13120,
+      "sha256": "34c41351a698c367299985f34ab0eff52e96cf09d74be83549a06361d6ac371f"
     },
     "firmware/inspection/utinspect/live_capture.py": {
       "bytes": 8682,
       "sha256": "25bf78d9dc4c1a87f9f182fc129ffd631abe14be4bd047df20be6c6e7b98f004"
     },
     "firmware/inspection/utinspect/live_result.py": {
-      "bytes": 2372,
-      "sha256": "03ed34a8f7ed9effebadd983d5fa0eae81b2b1f98578170aea5e001d12e3aaf0"
+      "bytes": 2996,
+      "sha256": "5ff3abde6e064ed689aba065f369e4528c0b4b756529a7a3d655e377f25befa5"
     },
     "firmware/inspection/utinspect/live_service.py": {
-      "bytes": 10198,
-      "sha256": "e94df3caf39e085ffa5f69fb0d79aa461bdd517d94355848ef74355dea57e82e"
+      "bytes": 10923,
+      "sha256": "bb3d9c05378239202d4193263fa9143bbc9bae0a606c2753d94d124ee1698cf0"
     },
     "firmware/inspection/utinspect/local_scan.py": {
-      "bytes": 15026,
-      "sha256": "76504a4d8c0adc2e483151ff89266b7eea295368df48ff40021475fe4b67728d"
+      "bytes": 15025,
+      "sha256": "2af56caae9dca871cf7be84b97336fc81d0aeecee474830da176d287bf90f9cd"
     },
     "firmware/inspection/utinspect/mapping.py": {
-      "bytes": 18294,
-      "sha256": "d7df18ccfa97d08b61be922fdefcbf016f430d2b2b9f2e05e138dded183d0ccc"
+      "bytes": 18925,
+      "sha256": "69ddb7749ff92140dc4717c1c98441d9e00069e10f9048f3eada041b2e87be48"
     },
     "firmware/inspection/utinspect/mapping_app.py": {
-      "bytes": 16022,
-      "sha256": "24a5c33702e99acf57f1df16212105e4ee7f65f58af9657e7fbce9700be1dd7a"
+      "bytes": 16315,
+      "sha256": "343a7a58275213d5083ef9ca62adf4378619f4d31c993be0f56fb64f6196fc6a"
     },
     "firmware/inspection/utinspect/network.py": {
       "bytes": 3553,
       "sha256": "10645803c7169a0de10ec659289fca9b493e1b4ca6a2d6a383a8e1703c84c2e4"
     },
     "firmware/inspection/utinspect/records.py": {
-      "bytes": 652,
-      "sha256": "5ba2b5355f9b64434a54a4d55c01732f20d62a75a8fcf3b5bc0a2c7bcf925d96"
+      "bytes": 770,
+      "sha256": "fd9476c30cc5140240fc7f60ec489886ee3a0058adad4b3913b3a42244fd747e"
     },
     "firmware/inspection/utinspect/reference_audit.py": {
       "bytes": 12982,
@@ -326,8 +345,8 @@
       "sha256": "28725d2e3af520eadd098ce9ff85bfaf027b8ae8a3b82ac3176cd61b2d3a3557"
     },
     "firmware/inspection/web/camera_basic.html": {
-      "bytes": 16043,
-      "sha256": "b1e04d0e55c7b30eaff276b08e1f2939153242579be0b9512d5b490d80a4049c"
+      "bytes": 16210,
+      "sha256": "40772b6f30197a22cbe9b43b87278f34376dddddd7e1affc1f8d19dc1c8e3539"
     },
     "firmware/inspection/web/inspection.html": {
       "bytes": 51612,
@@ -338,8 +357,8 @@
       "sha256": "c2cb1bab48b9de4a75759361a284e3d5348f172f6615df9bd88c2659c75db206"
     },
     "firmware/inspection/web/realtime.html": {
-      "bytes": 11856,
-      "sha256": "762ad6b7727a8d94eb5d1a757909b790017ad82eb4604a49622829c360dcc9c0"
+      "bytes": 13978,
+      "sha256": "451fb136a55db507ab28159b556c7f656719d31786b2a09ce5482407b7b0c831"
     },
     "firmware/inspection/web/workpiece.html": {
       "bytes": 32232,
@@ -358,20 +377,20 @@
       "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
     },
     "firmware/lvgl_ui/assets/ut_font.c": {
-      "bytes": 948537,
-      "sha256": "5b1d06e591ee2f9e76971c3d602c2485162bd39884a93afba567c90483197825"
+      "bytes": 989948,
+      "sha256": "90f4d5c3b8d1a54bfcac247d3a4ff8dd193ca71fc95b2fd982ff0962f27d0125"
     },
     "firmware/lvgl_ui/assets/ut_font.h": {
-      "bytes": 155,
-      "sha256": "1fd32be1eb4e3096eb2a9b5572bb53cd142c175e426fd16dd0fed647e61ddbb9"
+      "bytes": 148,
+      "sha256": "3c5822c7a79ef4432d0e901aec5c36c1e3c26f87470e6d5b9c9f9586ecf96c42"
     },
     "firmware/lvgl_ui/assets/ut_palette.c": {
-      "bytes": 206209,
-      "sha256": "bf08a18992f671578be31c80b8f900aadf0f175da3097b5365fa6316889f3a76"
+      "bytes": 203900,
+      "sha256": "356123b604f1d80a3b3b50b46a058f40f73fb1b552f799eb7a5f9a9011cef38b"
     },
     "firmware/lvgl_ui/assets/ut_palette.h": {
-      "bytes": 162,
-      "sha256": "7d787ec4f48007292f22eff77a9d216fe2d59fd5739c8b6d0df6314a4eb092e6"
+      "bytes": 156,
+      "sha256": "4dd38f3d3e50f88f427ac4b03f66923cb24f5df17085cca3cafd32cf426079f1"
     },
     "firmware/lvgl_ui/lv_conf.h": {
       "bytes": 1304,
@@ -390,16 +409,16 @@
       "sha256": "4c1370f4a5fadd1411aa3bd0e71758412ff1af8aad71ed26d9717370cb204178"
     },
     "firmware/lvgl_ui/ports/linux_live.c": {
-      "bytes": 6094,
-      "sha256": "8c35d8910b3bb53e8674f4d736702bb2485ca398017a1597e46f2e0bb75ee5c8"
+      "bytes": 6342,
+      "sha256": "a87d0a6f7768f353a2bf3e25096d9b2d458752638637992730b8671bdaa4dce0"
     },
     "firmware/lvgl_ui/ports/linux_live.h": {
       "bytes": 283,
       "sha256": "d93664c6fee8f1b4f32ea8535e6e52413aabeda9cd8c65d2b6511cefa1c83ba1"
     },
     "firmware/lvgl_ui/ports/linux_main.c": {
-      "bytes": 17880,
-      "sha256": "3fb290002aff23405d80a13df00540b29ab3a611273408ad55b27adc3cc4fb79"
+      "bytes": 17868,
+      "sha256": "0e4f0c1a8ab0d1e7c3e931e4d8b0ea280858a434e3e1d500c43095f2449b910a"
     },
     "firmware/lvgl_ui/ports/linux_scan.c": {
       "bytes": 6326,
@@ -422,8 +441,8 @@
       "sha256": "29e4e15508429a1b45a6b571a3ecb2cf95e3f364859a8aff9f29db55a1470f9a"
     },
     "firmware/lvgl_ui/ports/ut_red_marker.h": {
-      "bytes": 2742,
-      "sha256": "90c9e18eb51c617a5e5fd22fcf3e4dbc8582605a27a2f2298c1ba989f10e6564"
+      "bytes": 3477,
+      "sha256": "4a0999f9eaccc1550efe90e0606a5a70d13952f9bbf68f90141ed2be4b9bfd61"
     },
     "firmware/lvgl_ui/ports/ut_uvc_capture.c": {
       "bytes": 12742,
@@ -495,11 +514,11 @@
     },
     "firmware/lvgl_ui/src/ut_model.c": {
       "bytes": 9560,
-      "sha256": "f80bac2da4684719521dcde4c8c5e548ed302097f257e123f329fd9c12c29f97"
+      "sha256": "d6d2c51c7413f849b275ecf084f3f1e196ed8c2953c77fa782dbf5bb91535554"
     },
     "firmware/lvgl_ui/src/ut_model.h": {
-      "bytes": 1823,
-      "sha256": "5804faf2d0476d18cf1a23fcb71b1af8df3e1be427a1e69b23e57b64ff2044ff"
+      "bytes": 1885,
+      "sha256": "633bf0f818ef09324ba4aee50033a37fd40d0d9bfdf04baf6445849e3b77b6f6"
     },
     "firmware/lvgl_ui/src/ut_rgb.c": {
       "bytes": 380,
@@ -534,8 +553,8 @@
       "sha256": "585061f24b5e8f500636b1a54f405888f71be79fdb7fa430bc3bca7e021e9e94"
     },
     "firmware/lvgl_ui/src/ut_ui.c": {
-      "bytes": 55239,
-      "sha256": "b7ba5d308bfa202ffee003a0a046b74d39f79c091fa5fc5146cef753951261aa"
+      "bytes": 59271,
+      "sha256": "60fceb9b72a8f5d31c7c61ce4252114f8e8b4da62a2a529d42e52dc7b21168c0"
     },
     "firmware/lvgl_ui/src/ut_ui.h": {
       "bytes": 1362,
@@ -570,8 +589,8 @@
       "sha256": "3510fcb7ce0da7614d4f15a4dc8f247363b4a245d836b77fc12d9cde47feb94a"
     },
     "firmware/lvgl_ui/tests/test_linux_live.c": {
-      "bytes": 4055,
-      "sha256": "e93fa498f3e546e35a366e994cbfaa2f3c8e311b9164b8ee332b3975c23bc3f7"
+      "bytes": 5963,
+      "sha256": "74696f4609e18f2c786db431a334a7d9392c9bc89890ca3c131c34c4891d5df3"
     },
     "firmware/lvgl_ui/tests/test_linux_scan.c": {
       "bytes": 3419,
@@ -594,8 +613,8 @@
       "sha256": "508d902632e5a7a057abe1166e1213b71d24eb7e9ae7bc470d0b0e5c3470243f"
     },
     "firmware/lvgl_ui/tests/test_native_marker.c": {
-      "bytes": 1560,
-      "sha256": "54e0112a2da3d5af033945b16dd97b54cf5458d3b4a67f44b5ae1fc700e95090"
+      "bytes": 2408,
+      "sha256": "5f6455697ad4fa55c6c7b95b41d4d48ee9ebd2bdad621360faf099bba121b689"
     },
     "firmware/lvgl_ui/tests/test_rgb.c": {
       "bytes": 1219,
@@ -630,8 +649,8 @@
       "sha256": "a9561bd6effb6eeaf61205aea20165a50831d931fb804d1a219f606b17cb9b75"
     },
     "firmware/lvgl_ui/tests/test_ui_live.c": {
-      "bytes": 2310,
-      "sha256": "b07d93c794db42e389ade5297dd1d732f8bea65f49c2a259efe4e07247bc7507"
+      "bytes": 4326,
+      "sha256": "0cfe846ed83ca6ed7f3832acff808d3b9866b77b815fbc236bdefca71c50a967"
     },
     "firmware/lvgl_ui/tests/test_zynq_rgb_build.py": {
       "bytes": 2870,
@@ -710,12 +729,16 @@
       "sha256": "adfa25f1a0ce5a849e1350b4ddaa2886c8a2a3b5fb27219eb5143952b76bfb7c"
     },
     "fpga/md1213_tx_controller.sv": {
-      "bytes": 5064,
-      "sha256": "1555042cdaf8becacffae2cc07f24e8149a14aed7cce7eeb2a71e08eba0ad1a2"
+      "bytes": 5062,
+      "sha256": "af0ac38f37de5eaa13b23bbe092340dc6e86bb1e81899ec61e1e5c42210cdeb3"
     },
     "fpga/tb_md1213_capture_axi.sv": {
       "bytes": 8606,
       "sha256": "2d010991f0c7b3bb15f5a4d689d2148adb0617668d5c19ce96b4d31b2842f023"
+    },
+    "fpga/tb_md1213_live_capture.sv": {
+      "bytes": 9097,
+      "sha256": "2e6a3f67fcd838a6d583546a350ee10e19df437ddfd1ca8758a235ad4d907c19"
     },
     "fpga/tb_md1213_touch_io.sv": {
       "bytes": 2667,
@@ -728,6 +751,10 @@
     "petalinux/board_acceptance.py": {
       "bytes": 10711,
       "sha256": "ef08015a723869bba5a01aa9c549e84f9bd6d2231a36c1569e0cc9123b2a0a6c"
+    },
+    "petalinux/capture_acceptance_batch.py": {
+      "bytes": 11185,
+      "sha256": "091c3f1326e8504eb256c53adc7fb3f4ce22895c4e729a2ada5ac055b4005149"
     },
     "petalinux/linux/console.cfg": {
       "bytes": 39,
@@ -761,9 +788,13 @@
       "bytes": 572,
       "sha256": "d4f8c0d32ce2cb04418761b3cfa67ff802c382852caa663683186c6154860a39"
     },
+    "petalinux/monitor_camera_readonly.py": {
+      "bytes": 15273,
+      "sha256": "b3500d9c8cf5efa5be5843654b50c5d948b6997a70ada6f516146ff29d35a510"
+    },
     "petalinux/package_board_service.py": {
-      "bytes": 3282,
-      "sha256": "db74cd2d1ec50fa11a9fa1be8a09d66fc100b9e05b7f857cc5f7788fff44f308"
+      "bytes": 4222,
+      "sha256": "63c4df513dde8f724bfaf783fa8f209a25022a037e53561fd7332c53faae23a4"
     },
     "petalinux/recipes/busybox/busybox_%.bbappend": {
       "bytes": 96,
@@ -802,8 +833,56 @@
       "sha256": "a0a991d5f2bcff8e005e67c80bc89720815de6018c482b63e9eff24011ba2bf2"
     },
     "petalinux/recipes/utinspect/utinspect_0.1.bb": {
-      "bytes": 1432,
-      "sha256": "928134b25cad30872964b897c2dd35fcc130d55fd00a6fe5118dd72d62df0791"
+      "bytes": 1536,
+      "sha256": "00e47accf744bae65c2edbc37d946019834371d6b75e27c6690237e005f0091f"
+    },
+    "petalinux/record_acceptance.ps1": {
+      "bytes": 1933,
+      "sha256": "29b70f4e1a1ce65dd8b14773704f5d1f4a79e6f7f018ec5820e0f07333de22bf"
+    },
+    "report/llm_collaboration.md": {
+      "bytes": 6430,
+      "sha256": "735a6068e24749c7422784a94bb28bb103f776b1e6e39c0b121e7c6233878ff2"
+    },
+    "skill/README.md": {
+      "bytes": 2487,
+      "sha256": "7bec6790aa7923883940d0099672c4c3673ff71fb52c5cb9ad64351ac0f7899a"
+    },
+    "skill/artifact_verification.md": {
+      "bytes": 1643,
+      "sha256": "99e9fa759ab0cc1a43ef2f7526f0c5d8744adad44ad9485ad19b3812c68d24da"
+    },
+    "skill/check_capture.py": {
+      "bytes": 7608,
+      "sha256": "951581ffb58449c85a9193203e2815d171270ec07ad4aa391921c8872e759113"
+    },
+    "skill/echo_gate_review.md": {
+      "bytes": 1639,
+      "sha256": "4f7fe8a187e3547d75bec6fc3ee8ffb6f337a2d89168dd67b04de5a07ff6a590"
+    },
+    "skill/examples/invalid_clock.csv": {
+      "bytes": 61,
+      "sha256": "cd4cad07152de90f1565e1f38b6516112ba5a79f693adfbb9fccaedd8409aacb"
+    },
+    "skill/examples/invalid_index.csv": {
+      "bytes": 61,
+      "sha256": "229b31a9a82bf7a865a4df09653595dfd82eb3e1501ca6450c92d34e77533846"
+    },
+    "skill/examples/invalid_range.csv": {
+      "bytes": 61,
+      "sha256": "8035538f5831ee0b4ba5d4a6c81f805256172cf27b3934feded76a1eccff9a64"
+    },
+    "skill/examples/valid.csv": {
+      "bytes": 61,
+      "sha256": "458f45c94d9c3a515006fc0d8c0d34f9941089982bdbd67e51877b38190f2205"
+    },
+    "skill/fast_capture_review.md": {
+      "bytes": 2123,
+      "sha256": "2139c673654beed8bcb0f16dd0fcae530ac3c54b9d3825d51b282c2c7ca74ff5"
+    },
+    "tools/tests/test_acceptance_batch.py": {
+      "bytes": 8130,
+      "sha256": "35f09c8a37827c07385e2583f21d50dac217814f5421693efa3e63744a5dca33"
     }
   }
 }

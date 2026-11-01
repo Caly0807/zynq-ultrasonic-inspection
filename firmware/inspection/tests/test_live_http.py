@@ -5,6 +5,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from utinspect.device_app import create_server
 from utinspect.live_service import LiveAcquisition
@@ -44,7 +45,7 @@ class LiveHTTPTests(unittest.TestCase):
         return result
 
     def test_unauthenticated_view_or_start_cannot_control_capture(self):
-        for route, payload in (("/live", None), ("/api/live", None), ("/api/live/start", {})):
+        for route, payload in (("/live", None), ("/api/live", None), ("/api/live/waveform", None), ("/api/live/start", {})):
             with self.subTest(route=route):
                 self.assertEqual(self.request(route, payload, False)[0], 401)
         self.assertFalse(self.live.state()["active"])
@@ -59,6 +60,18 @@ class LiveHTTPTests(unittest.TestCase):
         status, body = self.request("/api/state")
         self.assertTrue(json.loads(body)["capture_adapter_configured"])
         self.assertEqual(self.session.points, [])
+        status, body = self.request("/api/live/waveform")
+        self.assertEqual(status, 400)
+        self.assertIn("No fresh live waveform", json.loads(body)["error"])
+        self.assertFalse(self.live.state()["active"])
+
+    def test_live_status_and_waveform_reads_do_not_acquire_the_map_snapshot(self):
+        with patch.object(self.session, "snapshot", side_effect=AssertionError("Map persistence is busy")):
+            for route in ("/api/device", "/api/live", "/live"):
+                with self.subTest(route=route):
+                    self.assertEqual(self.request(route)[0], 200)
+            self.assertEqual(self.request("/api/live/waveform")[0], 400)
+        self.assertFalse(self.live.state()["active"])
 
     def test_start_requires_confirmations_stop_and_expired_heartbeat_never_restart(self):
         self.assertEqual(self.request("/api/live/start", {})[0], 400)

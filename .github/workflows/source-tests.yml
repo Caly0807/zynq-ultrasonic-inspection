@@ -25,7 +25,11 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Create isolated environment
         run: python -m venv .venv
+      - name: Verify published source hashes
+        run: python -c "import hashlib,json,pathlib; root=pathlib.Path('../..'); manifest=json.loads((root/'SOURCE_MANIFEST.json').read_text(encoding='utf-8')); assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==entry['sha256'] for name,entry in manifest['files'].items())"
       - name: Install dependencies
         run: python -c "import os,subprocess; executable='.venv/Scripts/python.exe' if os.name=='nt' else '.venv/bin/python'; subprocess.run([executable,'-m','pip','install','-r','requirements.txt'],check=True)"
       - name: Run portable tests
         run: python -c "import os,subprocess; executable='.venv/Scripts/python.exe' if os.name=='nt' else '.venv/bin/python'; subprocess.run([executable,'-m','unittest','discover','-s','tests','-v'],check=True)"
+      - name: Run read-only acceptance recorder tests
+        run: python -c "import os,subprocess; executable='.venv/Scripts/python.exe' if os.name=='nt' else '.venv/bin/python'; subprocess.run([executable,'-m','unittest','discover','-s','../../tools/tests','-p','test_acceptance_batch.py','-v'],check=True)"

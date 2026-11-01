@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from .echo import EchoConfig
+from .echo import EchoConfig, live_echo_config
+from .echo_reference import load_normal_reference
 from .mapping import MapSession, MapSpec, render_dashboard
 from .mapping_app import make_map_handler
 from .network import NetworkAccess, load_token, private_address
@@ -136,6 +137,7 @@ def main(argv=None):
     parser.add_argument("--mode", choices=("DEMO", "RECORDED", "LIVE"), default="RECORDED")
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--config", type=Path)
+    parser.add_argument("--normal-reference", type=Path)
     parser.add_argument("--token-file", type=Path)
     parser.add_argument("--local-display-independent", action="store_true")
     arguments = parser.parse_args(argv)
@@ -150,15 +152,23 @@ def main(argv=None):
     token_path = arguments.token_file or arguments.data / "operator.token"
     token = load_token(token_path)
     run_name = datetime.now(timezone.utc).strftime("session_%Y%m%dT%H%M%SZ_") + uuid.uuid4().hex[:12]
-    session = MapSession(arguments.data / run_name, MapSpec(**configuration.get("mapping", {})),
-                         EchoConfig(**configuration.get("echo", {})), arguments.mode)
+    echo_values = configuration.get("echo", {})
+    echo = live_echo_config(echo_values) if arguments.mode == "LIVE" else EchoConfig(**echo_values)
+    reference_path = arguments.normal_reference or Path(__file__).resolve().parents[1] / "config/normal-reference.json"
+    normal_reference = load_normal_reference(reference_path) if reference_path.is_file() and arguments.mode != "DEMO" else None
+    if arguments.normal_reference and normal_reference is None:
+        raise ValueError("The requested normal-reference profile does not exist")
+    spec = MapSpec(**configuration.get("mapping", {}))
+    if normal_reference is not None and spec.thickness_mm != normal_reference.thickness_mm:
+        raise ValueError("Normal-reference nominal thickness does not match the workpiece")
+    session = MapSession(arguments.data / run_name, spec, echo, arguments.mode, normal_reference=normal_reference)
     session.bind_local_display(arguments.data / "lcd")
     live = None
     if arguments.mode == "LIVE":
         if runtime_status()["runtime"] != "ARM_LINUX":
             raise ValueError("LIVE service must run on ARM Linux; no host-side simulated producer is accepted")
         from .live_service import LiveAcquisition
-        live = LiveAcquisition(arguments.data / "lcd", session.echo)
+        live = LiveAcquisition(arguments.data / "lcd", session.echo, normal_reference=normal_reference)
         live.start_worker()
     server = create_server(arguments.bind, arguments.port, arguments.peer, token, session, arguments.data, live=live,
                            local_display_independent=arguments.local_display_independent)

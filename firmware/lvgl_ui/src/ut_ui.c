@@ -17,6 +17,7 @@
 
 static lv_obj_t *root_screen, *plot, *source_label, *source_badge, *status_label;
 static lv_obj_t *status_detail, *thickness_label, *amplitude_label, *tof_label, *gain_label;
+static lv_obj_t *calibration_badge, *calibration_caption, *thickness_caption, *thickness_detail;
 static lv_obj_t *source_detail, *pause_label, *settings_overlay, *threshold_value, *velocity_value;
 static lv_obj_t *scale_label, *legend_label, *sample_clock_label;
 static lv_obj_t *scan_page, *scan_plot, *scan_summary, *scan_point_label, *scan_status_label;
@@ -811,6 +812,49 @@ static void draw_waveform(lv_event_t *event)
     }
 }
 
+static const char *diagnosis_status_text(const ut_diagnosis_t *diagnosis)
+{
+    if (!diagnosis->present) return "等待判读结果";
+    if (diagnosis->status == UT_DIAG_INVALID) {
+        switch (diagnosis->reason) {
+        case 1: return "静区未配置";
+        case 2: return "静区超出窗口";
+        case 3: return "门区超出窗口";
+        case 4: return "信号饱和";
+        case 7: return "未见有效底波";
+        case 8: return "增益与标定不符";
+        case 9: return "静区噪声过大";
+        case 10: return "参考参数不符";
+        default: return "诊断无效";
+        }
+    }
+    if (!diagnosis->calibrated) {
+        if (diagnosis->reason == 11) return "未见新增反射";
+        if (diagnosis->flaw_crossed && diagnosis->baseline_valid) return "可疑反射";
+        return "参数未标定";
+    }
+    return diagnosis->status == UT_DIAG_SUSPECT ? "疑似反射" : "门区未见指示";
+}
+
+static const char *diagnosis_detail_text(const ut_diagnosis_t *diagnosis)
+{
+    if (diagnosis->status == UT_DIAG_INVALID) {
+        switch (diagnosis->reason) {
+        case 1: return "声学设置：应用静区预览";
+        case 2: case 3: return "声学设置：检查门区时间";
+        case 4: return "降低增益后重新采集";
+        case 7: return "检查耦合、输入与底波门";
+        case 8: return "恢复标定增益或重新标定";
+        case 9: return "声学设置：另选安静窗口";
+        case 10: return "检查参考增益与采样参数";
+        default: break;
+        }
+    }
+    if (diagnosis->reason == 11) return "与正常参考重叠 / 浅表需复核";
+    if (diagnosis->estimated_depth_valid) return "参考提示 / 完成标定后确认";
+    return "声学设置：采完整块参考";
+}
+
 static void redraw_values(void)
 {
     if (!plot) return;
@@ -829,13 +873,34 @@ static void redraw_values(void)
                          metrics.gate_b_visible ? "底波可见" : "回波待确认";
     bool live = current_frame.source == UT_SOURCE_LIVE;
     const ut_diagnosis_t *diagnosis = &current_frame.diagnosis;
-    if (live && current_frame.count)
-        status = !diagnosis->present || diagnosis->status == UT_DIAG_INVALID ? "诊断无效" :
-                 !diagnosis->calibrated ? "参数未标定" : diagnosis->status == UT_DIAG_SUSPECT ? "疑似反射" : "门区未见指示";
+    if (live && current_frame.count) status = diagnosis_status_text(diagnosis);
     lv_label_set_text(status_label, status);
-    lv_obj_set_style_text_color(status_label, color(metrics.clipped || metrics.gate_a_crossed ? COLOR_AMBER : COLOR_TEAL), 0);
-    lv_label_set_text(status_detail, current_frame.source == UT_SOURCE_DEMO ? "演示数据 / 非实测结论" : "请使用标准试块完成标定");
-    if (metrics.gate_b_visible && !metrics.clipped && (!live || (diagnosis->present && diagnosis->calibrated && diagnosis->status != UT_DIAG_INVALID))) lv_label_set_text_fmt(thickness_label, "%.1f", (double)metrics.reference_thickness_mm);
+    uint32_t status_color = metrics.clipped || metrics.gate_a_crossed ? COLOR_AMBER : COLOR_TEAL;
+    if (live && diagnosis->present)
+        status_color = diagnosis->status == UT_DIAG_INVALID || diagnosis->flaw_crossed ? COLOR_AMBER : COLOR_TEAL;
+    lv_obj_set_style_text_color(status_label, color(status_color), 0);
+    bool calibrated = live && current_frame.count && diagnosis->present && diagnosis->calibrated &&
+                      (diagnosis->status == UT_DIAG_SUSPECT || diagnosis->status == UT_DIAG_NO_INDICATION);
+    bool depth_available = calibrated && diagnosis->status == UT_DIAG_SUSPECT && diagnosis->depth_valid &&
+                           !metrics.clipped && isfinite(diagnosis->depth_mm) && diagnosis->depth_mm >= 0.0f;
+    bool estimate_available = live && current_frame.count && diagnosis->present && !diagnosis->calibrated &&
+                              diagnosis->status == UT_DIAG_UNCALIBRATED && diagnosis->baseline_valid &&
+                              diagnosis->flaw_crossed && diagnosis->estimated_depth_valid && !metrics.clipped &&
+                              !diagnosis->clipped && isfinite(diagnosis->estimated_depth_mm) && diagnosis->estimated_depth_mm > 0;
+    lv_label_set_text(calibration_caption, current_frame.source == UT_SOURCE_DEMO ? "演示" :
+                      current_frame.source == UT_SOURCE_RECORDED ? "回放" : calibrated ? "已标定" : "待标定");
+    lv_obj_set_style_bg_color(calibration_badge, color(calibrated ? 0x173D3A : 0x3A3025), 0);
+    lv_obj_set_style_text_color(calibration_caption, color(calibrated ? COLOR_TEAL : COLOR_AMBER), 0);
+    lv_label_set_text(status_detail, current_frame.source == UT_SOURCE_DEMO ? "演示数据 / 非实测结论" :
+                      !live ? "请使用标准试块完成标定" : !calibrated ? diagnosis_detail_text(diagnosis) :
+                      diagnosis->status == UT_DIAG_NO_INDICATION ? "本帧门区未见指示" :
+                      depth_available ? "已扣除声学零点" : "反射深度待核验");
+    lv_label_set_text(thickness_caption, estimate_available ? "参考深度" : live ? "反射深度" : "底波参考厚度");
+    lv_label_set_text(thickness_detail, estimate_available ? "名义声速 / 零点估计" : live ? (depth_available ? "当前帧反射点" : calibrated ? "本帧无有效深度" : "完成声学标定后显示") : "底波飞行时间换算");
+    if (depth_available) lv_label_set_text_fmt(thickness_label, "%.1f", (double)diagnosis->depth_mm);
+    else if (estimate_available) lv_label_set_text_fmt(thickness_label, "%.1f", (double)diagnosis->estimated_depth_mm);
+    else if (!live && metrics.gate_b_visible && !metrics.clipped)
+        lv_label_set_text_fmt(thickness_label, "%.1f", (double)metrics.reference_thickness_mm);
     else lv_label_set_text(thickness_label, "--.-");
     if (current_frame.count) lv_label_set_text_fmt(amplitude_label, "%u", metrics.peak_to_peak);
     else lv_label_set_text(amplitude_label, "---");
@@ -919,16 +984,16 @@ void ut_ui_create(ut_action_cb_t action_callback)
     text(wave_card, "us", 447, 46, &lv_font_montserrat_10, COLOR_MUTED);
     lv_obj_t *status_card = panel(root_screen, 574, 112, 206, 112, COLOR_CARD, 12);
     text(status_card, "回波评估", 16, 13, &ut_font_14, COLOR_MUTED);
-    lv_obj_t *uncalibrated = panel(status_card, 142, 12, 50, 22, 0x3A3025, 5);
-    text(uncalibrated, "待标定", 5, 3, &ut_font_14, COLOR_AMBER);
+    calibration_badge = panel(status_card, 142, 12, 50, 22, 0x3A3025, 5);
+    calibration_caption = text(calibration_badge, "待标定", 5, 3, &ut_font_14, COLOR_AMBER);
     status_label = text(status_card, "等待数据", 16, 45, &ut_font_20, COLOR_TEAL);
     status_detail = text(status_card, "请使用标准试块完成标定", 16, 82, &ut_font_14, COLOR_MUTED);
     lv_obj_t *thickness_card = panel(root_screen, 574, 236, 206, 130, 0x142A32, 12);
     lv_obj_set_style_border_color(thickness_card, color(0x29534D), 0);
-    text(thickness_card, "底波参考厚度", 16, 13, &ut_font_14, COLOR_MUTED);
+    thickness_caption = text(thickness_card, "底波参考厚度", 16, 13, &ut_font_14, COLOR_MUTED);
     thickness_label = text(thickness_card, "--.-", 14, 37, &lv_font_montserrat_48, COLOR_TEXT);
     text(thickness_card, "mm", 160, 66, &lv_font_montserrat_14, COLOR_TEAL);
-    text(thickness_card, "ESTIMATE / NOT CALIBRATED", 16, 106, &lv_font_montserrat_10, COLOR_TEAL);
+    thickness_detail = text(thickness_card, "底波飞行时间换算", 16, 106, &ut_font_14, COLOR_TEAL);
     lv_obj_t *amplitude_card = panel(root_screen, 78, 380, 152, 67, COLOR_CARD, 10);
     text(amplitude_card, "回波峰峰值", 12, 9, &ut_font_14, COLOR_MUTED);
     amplitude_label = text(amplitude_card, "---", 12, 31, &lv_font_montserrat_24, COLOR_TEXT);
@@ -988,7 +1053,7 @@ void ut_ui_set_live_controls(bool active)
     live_controls = true;
     if (live_mode_button) {
         lv_obj_t *caption = lv_obj_get_child(live_mode_button, 0);
-        lv_label_set_text(caption, active ? "STOP" : "LIVE");
+        lv_label_set_text(caption, active ? "停止检测" : "开始检测");
         lv_obj_center(caption);
     }
 }

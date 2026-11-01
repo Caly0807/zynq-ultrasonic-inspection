@@ -110,6 +110,25 @@ class CalibrationMathTests(unittest.TestCase):
                 frame = parse_frame(frame_bytes(boxes=boxes), NOW, True)
                 self.assertEqual(red_marker(frame)["status"], expected)
 
+    def test_skin_colors_and_long_red_regions_are_not_probe_markers(self):
+        for color in (bytes((220, 140, 110)), bytes((180, 90, 60)), bytes((200, 105, 85)), bytes((150, 80, 55))):
+            with self.subTest(color=list(color)):
+                payload = frame_bytes(boxes=[(65, 45, 95, 75)]).replace(b"\xf0\x20\x10", color)
+                self.assertEqual(red_marker(parse_frame(payload, NOW, True))["status"], "NOT_FOUND")
+        frame = parse_frame(frame_bytes(boxes=[(40, 50, 120, 60)]), NOW, True)
+        self.assertEqual(red_marker(frame)["status"], "NOT_FOUND")
+
+    def test_red_marker_remains_unique_beside_a_skin_colored_finger(self):
+        payload = bytearray(frame_bytes(boxes=[(90, 70, 110, 90)]))
+        pixel_offset = len(payload) - 160 * 120 * 3
+        for row in range(20, 60):
+            for column in range(30, 50):
+                offset = pixel_offset + (row * 160 + column) * 3
+                payload[offset:offset + 3] = bytes((220, 140, 110))
+        result = red_marker(parse_frame(bytes(payload), NOW, True))
+        self.assertEqual(result["status"], "FOUND")
+        self.assertEqual(result["pixel"], [99.5, 79.5])
+
 
 class BasicVisionLifecycleTests(unittest.TestCase):
     def setUp(self):

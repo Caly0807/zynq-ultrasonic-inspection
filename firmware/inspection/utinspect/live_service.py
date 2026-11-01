@@ -4,16 +4,17 @@ import threading
 import time
 from pathlib import Path
 
-from .echo import EchoConfig, analyze
+from .echo import EchoConfig, analyze, live_echo_config
 from .live_capture import LinuxCapture
 from .live_result import encode_result
 from .mapping import envelope
 
 
 class LiveAcquisition:
-    def __init__(self, directory, echo=None, *, factory=LinuxCapture, clock=time.monotonic_ns):
+    def __init__(self, directory, echo=None, *, factory=LinuxCapture, clock=time.monotonic_ns, normal_reference=None):
         self.directory = Path(directory)
-        self.echo = echo or EchoConfig()
+        self.echo = echo if echo is not None else live_echo_config()
+        self.normal_reference = normal_reference
         self.factory, self.clock = factory, clock
         self.condition = threading.Condition(threading.RLock())
         self.stop_event = threading.Event()
@@ -48,6 +49,16 @@ class LiveAcquisition:
                 result.update(record=self.latest.record(), preview=envelope(self.latest_waveform),
                               diagnosis=dict(self.latest_diagnosis))
             return result
+
+    def waveform_snapshot(self):
+        with self.condition:
+            state = self.state()
+            if not state["fresh"]:
+                raise ValueError("No fresh live waveform; reading never starts or renews acquisition")
+            waveform = self.latest_waveform
+            return {"schema": "ut-live-waveform/1", "record": state["record"], "diagnosis": state["diagnosis"],
+                    "frame_id": waveform.frame_id, "samples": list(waveform.samples),
+                    "trigger_index": waveform.trigger_index, "sample_period_us": waveform.sample_period_us}
 
     def start(self, payload):
         if set(payload) != {"owner", "gain", "probe_coupled", "safe_to_pulse"} or payload.get("probe_coupled") is not True or payload.get("safe_to_pulse") is not True:
@@ -197,7 +208,7 @@ class LiveAcquisition:
                     started = time.monotonic()
                     frame = capture.capture_once("PULSED", gain, operator_ready=True)
                     waveform = frame.waveform(self.boot_id)
-                    diagnosis = analyze(waveform, self.echo)
+                    diagnosis = analyze(waveform, self.echo, self.normal_reference)
                     with self.condition:
                         self.in_flight = False
                         if self._active() and owner == self.owner and gain == self.gain:

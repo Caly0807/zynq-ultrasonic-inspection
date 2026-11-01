@@ -51,6 +51,7 @@ class EchoConfig:
     calibrated: bool = False
     calibration_id: str = ""
     baseline_gate_us: tuple[float, float] | None = None
+    baseline_strategy: str = "EXPLICIT"
     reference_gain_code: int | None = None
 
     def __post_init__(self):
@@ -74,6 +75,10 @@ class EchoConfig:
             raise ValueError("Reference gain must be an integer in 0..0xE0")
         if not isinstance(self.calibration_id, str):
             raise ValueError("calibration_id must be a string")
+        if self.baseline_strategy not in ("EXPLICIT", "QUIET_SUBWINDOW"):
+            raise ValueError("Unknown baseline strategy")
+        if self.baseline_strategy == "QUIET_SUBWINDOW" and self.baseline_gate_us is None:
+            raise ValueError("Automatic baseline selection needs a bounded quiet search gate")
         if self.calibrated and not self.calibration_id.strip():
             raise ValueError("Approved calibration requires a calibration_id")
         if self.baseline_gate_us is not None:
@@ -84,6 +89,15 @@ class EchoConfig:
                 raise ValueError("Invalid quiet baseline gate")
             if any(start_us <= gate[1] and end_us >= gate[0] for gate in (self.flaw_gate_us, self.backwall_gate_us)):
                 raise ValueError("Quiet baseline gate must not overlap diagnostic gates")
+
+
+def live_echo_config(values=None):
+    configuration = {"flaw_gate_us": (2.5, 8.4), "baseline_gate_us": (20., 160.),
+                     "baseline_strategy": "QUIET_SUBWINDOW"}
+    if values and "baseline_gate_us" in values:
+        configuration["baseline_strategy"] = "EXPLICIT"
+    configuration.update(values or {})
+    return EchoConfig(**configuration)
 
 
 def load_csv(path):
@@ -134,7 +148,7 @@ def write_lvgl_csv(path, frame):
     temporary.replace(destination)
 
 
-def analyze(frame, config):
+def analyze(frame, config, normal_reference=None):
     result = {"source": frame.source, "frame_id": frame.frame_id, "status": "INVALID", "reason": "", "depth_mm": None, "calibration_id": config.calibration_id, "calibrated": config.calibrated}
     if config.reference_gain_code is not None and frame.gain != config.reference_gain_code:
         result["reason"] = "calibration_gain_mismatch"
@@ -147,12 +161,36 @@ def analyze(frame, config):
             result["reason"] = "baseline_gate_outside_acquisition_window"
             return result
         baseline_samples = [value for index, value in enumerate(frame.samples) if baseline_start <= (index - frame.trigger_index) * frame.sample_period_us <= baseline_end]
+        if config.baseline_strategy == "QUIET_SUBWINDOW" and len(baseline_samples) >= 128:
+            candidates = []
+            offsets = list(range(0, len(baseline_samples) - 127, 64))
+            if offsets[-1] != len(baseline_samples) - 128:
+                offsets.append(len(baseline_samples) - 128)
+            for offset in offsets:
+                samples = baseline_samples[offset:offset + 128]
+                center = statistics.median(samples)
+                spread = statistics.median(abs(value - center) for value in samples)
+                peak = max(abs(value - center) for value in samples)
+                candidates.append((spread, peak, offset, samples))
+            _, _, offset, baseline_samples = min(candidates, key=lambda candidate: candidate[:3])
+            first_index = math.ceil(baseline_start / frame.sample_period_us) + frame.trigger_index + offset
+            result["baseline_gate_used_us"] = [(first_index - frame.trigger_index) * frame.sample_period_us,
+                                                (first_index + 127 - frame.trigger_index) * frame.sample_period_us]
+        else:
+            result["baseline_gate_used_us"] = list(config.baseline_gate_us)
+        result["baseline_strategy"] = config.baseline_strategy
     if len(baseline_samples) < 32:
         result["reason"] = "insufficient_baseline_select_a_verified_quiet_gate"
         return result
     baseline = float(statistics.median(baseline_samples))
     noise = max(0.5, statistics.median(abs(value - baseline) for value in baseline_samples) * 1.4826)
     result.update(baseline=baseline, noise_codes=noise)
+    if config.baseline_gate_us is not None:
+        quiet_peak = max(abs(value - baseline) for value in baseline_samples)
+        if (noise * config.minimum_snr > min(config.flaw_threshold_codes, config.backwall_threshold_codes) or
+                quiet_peak > max(4., noise * 6)):
+            result["reason"] = "baseline_gate_not_quiet"
+            return result
     peaks = {}
     selected_samples = []
     for gate_name, interval in (("flaw", config.flaw_gate_us), ("backwall", config.backwall_gate_us)):
@@ -168,11 +206,27 @@ def analyze(frame, config):
     if frame.overrange or any(value in (0, 255) for value in selected_samples):
         result.update(status="INVALID", reason="adc_overrange_or_clipping")
         return result
-    flaw_hit = peaks["flaw"]["amplitude_codes"] >= max(config.flaw_threshold_codes, noise * config.minimum_snr)
+    flaw_threshold = max(config.flaw_threshold_codes, noise * config.minimum_snr)
+    flaw_hit = peaks["flaw"]["amplitude_codes"] >= flaw_threshold
+    reference_overlap = False
+    if normal_reference is not None:
+        if not normal_reference.matches(frame):
+            result["reason"] = "normal_reference_acquisition_mismatch"
+            return result
+        result["normal_reference_id"] = normal_reference.reference_id
+        result["raw_flaw"] = dict(peaks["flaw"])
+        filtered = normal_reference.select_peak(frame, baseline, config.flaw_gate_us, flaw_threshold, noise)
+        reference_overlap = flaw_hit and filtered is None
+        flaw_hit = filtered is not None
+        peaks["flaw"] = filtered or {"amplitude_codes": 0., "time_us": 0.}
+        result["flaw"] = peaks["flaw"]
+        result["normal_reference_overlap"] = reference_overlap
     backwall_hit = peaks["backwall"]["amplitude_codes"] >= max(config.backwall_threshold_codes, noise * config.minimum_snr)
     result.update(flaw_gate_crossed=flaw_hit, backwall_visible=backwall_hit)
     candidate = "SUSPECT" if flaw_hit else "NO_INDICATION" if backwall_hit else "INVALID"
     reason = "flaw_gate_threshold_crossed" if flaw_hit else "no_flaw_gate_indication" if backwall_hit else "backwall_missing_check_coupling"
+    if reference_overlap and backwall_hit:
+        reason = "normal_reference_overlap"
     result.update(candidate=candidate, reason=reason)
     if config.calibrated:
         result["status"] = candidate
@@ -180,6 +234,14 @@ def analyze(frame, config):
             result["depth_mm"] = (peaks["flaw"]["time_us"] - config.time_zero_us) * config.sound_speed_mps / 2000.0
     else:
         result["status"] = "UNCALIBRATED" if candidate != "INVALID" else "INVALID"
+        estimated_zero = config.time_zero_us if config.time_zero_us > 0 else (
+            normal_reference.estimated_time_zero_us if normal_reference is not None else None)
+        if flaw_hit and estimated_zero is not None and peaks["flaw"]["time_us"] > estimated_zero:
+            estimate = (peaks["flaw"]["time_us"] - estimated_zero) * config.sound_speed_mps / 2000.
+            if normal_reference is None or estimate < normal_reference.thickness_mm:
+                result["estimated_depth_mm"] = estimate
+                result["estimated_time_zero_us"] = estimated_zero
+                result["estimated_depth_basis"] = "UNAPPROVED_ACOUSTIC_ZERO_REFERENCE_ONLY"
     if frame.source == "DEMO":
         result["status"] = "DEMO_" + result["status"]
     return result

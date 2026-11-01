@@ -26,6 +26,7 @@ class EchoSetup:
     def __init__(self, directory, session, live, *, clock=time.monotonic_ns):
         self.directory, self.session, self.live, self.clock = Path(directory), session, live, clock
         config = session.echo
+        self.baseline_strategy = config.baseline_strategy
         self.values = [*config.flaw_gate_us, *config.backwall_gate_us, *(config.baseline_gate_us or (100., 110.)),
                        config.flaw_threshold_codes, config.backwall_threshold_codes, config.sound_speed_mps,
                        config.time_zero_us, session.spec.thickness_mm]
@@ -41,6 +42,7 @@ class EchoSetup:
         try:
             return EchoConfig(flaw_gate_us=tuple(self.values[:2]), backwall_gate_us=tuple(self.values[2:4]),
                               baseline_gate_us=tuple(self.values[4:6]), flaw_threshold_codes=self.values[6],
+                              baseline_strategy=self.baseline_strategy,
                               backwall_threshold_codes=self.values[7], sound_speed_mps=self.values[8],
                               time_zero_us=self.values[9])
         except ValueError:
@@ -67,6 +69,8 @@ class EchoSetup:
             if not BOUNDS[parameter][0] <= value <= BOUNDS[parameter][1]:
                 raise ValueError("Acoustic draft value is outside supported bounds")
             self.values[parameter] = float(value)
+            if parameter in (4, 5):
+                self.baseline_strategy = "EXPLICIT"
             self.phase, self.reason, self.proposal = "IDLE", "WAITING", None
             self.frames, self.seen = [], set()
         elif action == "echo-reference" and set(payload) == {"reference_confirmed", "normal_incidence_confirmed"}:
@@ -103,7 +107,7 @@ class EchoSetup:
 
     def _review(self):
         config = self._config()
-        results = [analyze(frame, config) for frame in self.frames]
+        results = [analyze(frame, config, self.session.normal_reference) for frame in self.frames]
         self.peak_flaw = max(result.get("flaw", {}).get("amplitude_codes", 0) for result in results)
         self.peak_wall = min(result.get("backwall", {}).get("amplitude_codes", 0) for result in results)
         self.noise = max(result.get("noise_codes", 0) for result in results)
@@ -112,14 +116,16 @@ class EchoSetup:
         elif any(result.get("reason") in ("baseline_gate_outside_acquisition_window", "gate_outside_acquisition_window",
                                            "insufficient_baseline_select_a_verified_quiet_gate") for result in results):
             self._reject("INVALID_CONFIGURATION")
+        elif any(result.get("reason") == "baseline_gate_not_quiet" for result in results):
+            self._reject("QUIET_GATE_NOISY")
         elif any(result.get("flaw_gate_crossed") for result in results):
             self._reject("REFERENCE_FLAW_GATE_CROSSED")
         elif any(not result.get("backwall_visible") for result in results):
             self._reject("BACKWALL_MISSING")
         else:
             quiet = [[value for index, value in enumerate(frame.samples)
-                      if config.baseline_gate_us[0] <= (index - frame.trigger_index) * frame.sample_period_us <= config.baseline_gate_us[1]]
-                     for frame in self.frames]
+                      if result["baseline_gate_used_us"][0] <= (index - frame.trigger_index) * frame.sample_period_us <= result["baseline_gate_used_us"][1]]
+                     for frame, result in zip(self.frames, results)]
             quiet_peak = max(abs(value - result["baseline"]) for samples, result in zip(quiet, results) for value in samples)
             times = [result["backwall"]["time_us"] for result in results]
             amplitudes = [result["backwall"]["amplitude_codes"] for result in results]

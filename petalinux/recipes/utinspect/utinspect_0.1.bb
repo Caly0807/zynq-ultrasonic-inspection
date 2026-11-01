@@ -17,6 +17,9 @@ RDEPENDS:${PN} = "python3-core python3-modules"
 do_install() {
     install -d ${D}${datadir}/utinspect ${D}${sysconfdir}/init.d ${D}${sysconfdir}/default ${D}${sbindir}
     cp -R ${WORKDIR}/utinspect ${WORKDIR}/web ${D}${datadir}/utinspect/
+    if test -d ${WORKDIR}/config; then
+        cp -R ${WORKDIR}/config ${D}${datadir}/utinspect/
+    fi
     install -m 0644 ${WORKDIR}/manifest.json ${D}${datadir}/utinspect/manifest.json
     install -m 0755 ${WORKDIR}/utinspect.init ${D}${sysconfdir}/init.d/utinspect
     install -m 0755 ${WORKDIR}/utinspect-launch ${D}${sbindir}/utinspect-launch
