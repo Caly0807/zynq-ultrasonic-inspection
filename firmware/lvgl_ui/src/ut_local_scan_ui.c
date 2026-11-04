@@ -6,6 +6,7 @@
 #include "../vendor/lvgl/src/misc/cache/instance/lv_image_cache.h"
 
 static lv_obj_t *overlay, *camera, *overview, *status_label, *hint_label, *live_caption;
+static lv_obj_t *probe_button, *probe_caption, *probe_reset;
 static ut_local_scan_t current;
 static ut_local_action_cb_t action_handler;
 static lv_image_dsc_t preview_image;
@@ -38,7 +39,7 @@ static lv_obj_t *label(lv_obj_t *parent, const char *caption, int position_x, in
 static void action_event(lv_event_t *event)
 {
     ut_local_action_t action = (ut_local_action_t)(uintptr_t)lv_event_get_user_data(event);
-    if (action_handler) action_handler(action, 0, 0);
+    if (action_handler) action_handler(action, action == UT_LOCAL_PROBE_CAPTURE ? (float)current.probe_points : 0, 0);
 }
 
 static lv_obj_t *button(lv_obj_t *parent, const char *caption, int position_x, int position_y, int width, lv_event_cb_t callback, void *data)
@@ -156,11 +157,21 @@ void ut_local_scan_ui_update(const ut_local_scan_t *state, const uint8_t *previe
     const char *reasons[] = {"等待真实数据", "定位准备完成", "相机断开或画面过期", "请选择工件四角", "请先开启真实波形",
                             "探头标记丢失：不录入", "轻移探头，停稳后录入", "本格真实数据已录入", "扫描已结束，发射已停止",
                             "请求失败，请检查条件", "已采样，诊断尚未标定", "本格已采样，请移动探头", "图像与回波时间不匹配", "定位标定改变，请重新开始",
-                            "回波无效：检查耦合、基线与幅值"};
+                            "回波无效：检查耦合、基线与幅值", "请完成探头接触点校准"};
     if ((int32_t)(lv_tick_get() - notice_until) >= 0) {
         if (current.flags & 8U)
             lv_label_set_text_fmt(hint_label, "四角 %u/4：左上 → 右上 → 右下 → 左下；确认相机与钢块固定", current.corner_count);
-        else lv_label_set_text(hint_label, current.reason <= 14 ? reasons[current.reason] : "状态未知");
+        else if ((current.flags & 128U) && current.phase != 2)
+            lv_label_set_text(hint_label, "近似定位：覆盖仅作参考；五点接触配准可选");
+        else if ((current.flags & 2U) && !(current.flags & 64U) && current.probe_points < 5) {
+            const ut_map_t *map = ut_ui_map();
+            float length = map && map->length_mm > 0 ? map->length_mm : 80;
+            float width = map && map->width_mm > 0 ? map->width_mm : 80;
+            const float targets[5][2] = {{.125f,.125f},{.875f,.125f},{.875f,.875f},{.125f,.875f},{.5f,.5f}};
+            lv_label_set_text_fmt(hint_label, "探头中心放在 X %.0f / Y %.0f mm，竖直停稳后点定位 %u/5",
+                                 (double)(targets[current.probe_points][0] * length),
+                                 (double)(targets[current.probe_points][1] * width), current.probe_points + 1);
+        } else lv_label_set_text(hint_label, current.reason <= 15 ? reasons[current.reason] : "状态未知");
     }
     char position[64];
     if (current.flags & 4U) snprintf(position, sizeof(position), "X %.1f / Y %.1f mm", (double)current.position_x, (double)current.position_y);
@@ -169,9 +180,15 @@ void ut_local_scan_ui_update(const ut_local_scan_t *state, const uint8_t *previe
         "%s\n\n采样格 %u / %u\n未扫格 %u\n有效诊断格 %u\n疑似反射格 %u\n\n%s\n%s\n%s",
         current.phase == 1 ? "手动面扫进行中" : current.phase == 2 ? "扫描结果" : "脱机手动面扫",
         current.sampled, current.total, current.total - current.sampled, current.valid, current.suspect, position,
-        current.flags & 2U ? "视觉：已标定" : "视觉：待选四角",
+        current.flags & 64U ? "视觉：接触点已校准" : current.flags & 128U ? "视觉：近似定位" : current.flags & 2U ? "视觉：待校准接触点" : "视觉：待选四角",
         current.flags & 32U ? "声学：已标定" : "声学：未标定，不报深度");
     lv_label_set_text(live_caption, current.flags & 16U ? "停止波形" : "真实波形");
+    lv_label_set_text_fmt(probe_caption, "定位 %u/5", current.probe_points < 5 ? current.probe_points + 1 : 5);
+    if (!(current.flags & 2U) || (current.flags & 8U) || current.phase == 1 || current.probe_points >= 5)
+        lv_obj_add_state(probe_button, LV_STATE_DISABLED);
+    else lv_obj_remove_state(probe_button, LV_STATE_DISABLED);
+    if (current.phase == 1) lv_obj_add_state(probe_reset, LV_STATE_DISABLED);
+    else lv_obj_remove_state(probe_reset, LV_STATE_DISABLED);
     if (preview && (current.flags & 1U)) {
         preview_image.header.magic = LV_IMAGE_HEADER_MAGIC;
         preview_image.header.cf = LV_COLOR_FORMAT_XRGB8888;
@@ -196,8 +213,13 @@ void ut_local_scan_ui_create(ut_local_action_cb_t callback)
     button(lv_screen_active(), "视觉面扫", 564, 68, 110, open_event, NULL);
     overlay = panel(lv_screen_active(), 12, 114, 776, 352);
     label(overlay, "视觉定位 / 手动面扫", 16, 8, 300);
-    button(overlay, "新工件", 566, 0, 112, action_event, (void *)(uintptr_t)UT_LOCAL_NEW);
-    button(overlay, "返回", 700, 0, 64, close_event, NULL);
+    probe_button = button(overlay, "定位 1/5", 342, 0, 104, action_event, (void *)(uintptr_t)UT_LOCAL_PROBE_CAPTURE);
+    probe_caption = lv_obj_get_child(probe_button, 0);
+    probe_reset = button(overlay, "重置探头", 454, 0, 104, action_event, (void *)(uintptr_t)UT_LOCAL_PROBE_RESET);
+    lv_obj_set_height(probe_button, 28);
+    lv_obj_set_height(probe_reset, 28);
+    lv_obj_set_height(button(overlay, "新工件", 566, 0, 112, action_event, (void *)(uintptr_t)UT_LOCAL_NEW), 28);
+    lv_obj_set_height(button(overlay, "返回", 700, 0, 64, close_event, NULL), 28);
     hint_label = label(overlay, "相机和工件固定后，先选取工件四角", 16, 29, 680);
     camera = lv_image_create(overlay);
     lv_obj_set_pos(camera, 16, 52);

@@ -300,7 +300,9 @@ class BasicVisionHTTPTests(unittest.TestCase):
 
     def test_all_vision_routes_require_existing_device_credentials(self):
         for route, payload in (("/vision", None), ("/api/vision/state", None), ("/api/vision/frame.png", None),
-                               ("/api/vision/freeze", {}), ("/api/vision/calibrate", {}), ("/api/vision/clear", {})):
+                               ("/api/vision/freeze", {}), ("/api/vision/calibrate", {}), ("/api/vision/clear", {}),
+                               ("/api/vision/reference?specimen=UT45-02-R3&h1_end=X20", None),
+                               ("/api/vision/probe/capture", {}), ("/api/vision/probe/reset", {}), ("/api/vision/resume", {})):
             with self.subTest(route=route):
                 self.assertEqual(self.request(route, payload, authenticated=False)[0], 401)
 
@@ -331,6 +333,23 @@ class BasicVisionHTTPTests(unittest.TestCase):
         self.assertFalse(record["preview_available"])
         self.assertEqual(record["source"], "UNAVAILABLE")
         self.assertEqual(self.request("/api/vision/frame.png")[0], 400)
+
+    def test_reference_and_probe_routes_cannot_create_diagnoses_or_start_acquisition(self):
+        for specimen in ("UT45-02-R3", "UT45-03-R3"):
+            status, _, body = self.request(f"/api/vision/reference?specimen={specimen}&h1_end=X20")
+            self.assertEqual(status, 200)
+            reference = json.loads(body)
+            self.assertTrue(reference["reference_only"])
+            self.assertFalse(reference["feeds_diagnosis"])
+            self.assertEqual(len(reference["holes"]), 3)
+        self.assertEqual(self.request("/api/vision/reference?specimen=UT45-02-R3")[0], 400)
+        self.assertEqual(self.request("/api/vision/probe/capture", {})[0], 400)
+        self.assertEqual(self.request("/api/vision/probe/reset", {}, origin="http://untrusted.invalid")[0], 403)
+        self.assertEqual(self.request("/api/vision/probe/reset", {})[0], 200)
+        self.assertEqual(self.session.points, [])
+        device = json.loads(self.request("/api/device")[2])
+        self.assertFalse(device["transmit_enabled"])
+        self.assertFalse(device["motion_enabled"])
 
 
 if __name__ == "__main__":

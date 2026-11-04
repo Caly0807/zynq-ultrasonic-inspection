@@ -100,7 +100,8 @@ def create_server(address, port, peer, token, session, runtime_directory=None, v
         finally:
             transport_lock.release()
     if vision is None and runtime_directory is not None:
-        vision = BasicVision(Path(runtime_directory) / "vision/frame.ppm", session.spec.length_mm, session.spec.width_mm)
+        vision = BasicVision(Path(runtime_directory) / "vision/frame.ppm", session.spec.length_mm, session.spec.width_mm,
+                             require_center_dot=True)
     def current_status():
         result = dict(status)
         if live is not None:

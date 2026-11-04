@@ -24,6 +24,9 @@ typedef struct {
     uint8_t gain;
     bool overrange;
     ut_source_t source;
+    uint32_t sequence;
+    uint64_t captured_monotonic_ns;
+    bool live_stale;
     char source_name[96];
     ut_diagnosis_t diagnosis;
 } ut_frame_t;

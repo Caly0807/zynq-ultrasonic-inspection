@@ -864,6 +864,8 @@ static void redraw_values(void)
     if (current_frame.source == UT_SOURCE_DEMO) { source = "DEMO 演示"; source_color = COLOR_AMBER; }
     if (current_frame.source == UT_SOURCE_RECORDED) { source = "历史回放"; source_color = COLOR_BLUE; }
     if (current_frame.source == UT_SOURCE_LIVE) { source = "实时采集"; source_color = COLOR_TEAL; }
+    bool stale = current_frame.source == UT_SOURCE_LIVE && current_frame.live_stale;
+    if (stale) { source = "上一帧"; source_color = COLOR_AMBER; }
     if (paused) source = "显示已暂停";
     lv_label_set_text(source_label, source);
     lv_obj_set_style_text_color(source_label, color(source_color), 0);
@@ -874,29 +876,31 @@ static void redraw_values(void)
     bool live = current_frame.source == UT_SOURCE_LIVE;
     const ut_diagnosis_t *diagnosis = &current_frame.diagnosis;
     if (live && current_frame.count) status = diagnosis_status_text(diagnosis);
+    if (stale) status = "等待新帧";
     lv_label_set_text(status_label, status);
     uint32_t status_color = metrics.clipped || metrics.gate_a_crossed ? COLOR_AMBER : COLOR_TEAL;
     if (live && diagnosis->present)
         status_color = diagnosis->status == UT_DIAG_INVALID || diagnosis->flaw_crossed ? COLOR_AMBER : COLOR_TEAL;
+    if (stale) status_color = COLOR_AMBER;
     lv_obj_set_style_text_color(status_label, color(status_color), 0);
-    bool calibrated = live && current_frame.count && diagnosis->present && diagnosis->calibrated &&
+    bool calibrated = live && !stale && current_frame.count && diagnosis->present && diagnosis->calibrated &&
                       (diagnosis->status == UT_DIAG_SUSPECT || diagnosis->status == UT_DIAG_NO_INDICATION);
     bool depth_available = calibrated && diagnosis->status == UT_DIAG_SUSPECT && diagnosis->depth_valid &&
                            !metrics.clipped && isfinite(diagnosis->depth_mm) && diagnosis->depth_mm >= 0.0f;
-    bool estimate_available = live && current_frame.count && diagnosis->present && !diagnosis->calibrated &&
+    bool estimate_available = live && !stale && current_frame.count && diagnosis->present && !diagnosis->calibrated &&
                               diagnosis->status == UT_DIAG_UNCALIBRATED && diagnosis->baseline_valid &&
                               diagnosis->flaw_crossed && diagnosis->estimated_depth_valid && !metrics.clipped &&
                               !diagnosis->clipped && isfinite(diagnosis->estimated_depth_mm) && diagnosis->estimated_depth_mm > 0;
-    lv_label_set_text(calibration_caption, current_frame.source == UT_SOURCE_DEMO ? "演示" :
+    lv_label_set_text(calibration_caption, stale ? "已过期" : current_frame.source == UT_SOURCE_DEMO ? "演示" :
                       current_frame.source == UT_SOURCE_RECORDED ? "回放" : calibrated ? "已标定" : "待标定");
     lv_obj_set_style_bg_color(calibration_badge, color(calibrated ? 0x173D3A : 0x3A3025), 0);
     lv_obj_set_style_text_color(calibration_caption, color(calibrated ? COLOR_TEAL : COLOR_AMBER), 0);
-    lv_label_set_text(status_detail, current_frame.source == UT_SOURCE_DEMO ? "演示数据 / 非实测结论" :
+    lv_label_set_text(status_detail, stale ? "暂存波形 / 不作为当前判读" : current_frame.source == UT_SOURCE_DEMO ? "演示数据 / 非实测结论" :
                       !live ? "请使用标准试块完成标定" : !calibrated ? diagnosis_detail_text(diagnosis) :
                       diagnosis->status == UT_DIAG_NO_INDICATION ? "本帧门区未见指示" :
                       depth_available ? "已扣除声学零点" : "反射深度待核验");
     lv_label_set_text(thickness_caption, estimate_available ? "参考深度" : live ? "反射深度" : "底波参考厚度");
-    lv_label_set_text(thickness_detail, estimate_available ? "名义声速 / 零点估计" : live ? (depth_available ? "当前帧反射点" : calibrated ? "本帧无有效深度" : "完成声学标定后显示") : "底波飞行时间换算");
+    lv_label_set_text(thickness_detail, stale ? "等待下一帧后更新" : estimate_available ? "名义声速 / 零点估计" : live ? (depth_available ? "当前帧反射点" : calibrated ? "本帧无有效深度" : "完成声学标定后显示") : "底波飞行时间换算");
     if (depth_available) lv_label_set_text_fmt(thickness_label, "%.1f", (double)diagnosis->depth_mm);
     else if (estimate_available) lv_label_set_text_fmt(thickness_label, "%.1f", (double)diagnosis->estimated_depth_mm);
     else if (!live && metrics.gate_b_visible && !metrics.clipped)
@@ -904,7 +908,7 @@ static void redraw_values(void)
     else lv_label_set_text(thickness_label, "--.-");
     if (current_frame.count) lv_label_set_text_fmt(amplitude_label, "%u", metrics.peak_to_peak);
     else lv_label_set_text(amplitude_label, "---");
-    if (metrics.gate_b_visible) lv_label_set_text_fmt(tof_label, "%.2f", (double)metrics.gate_b_time_us);
+    if (metrics.gate_b_visible && !stale) lv_label_set_text_fmt(tof_label, "%.2f", (double)metrics.gate_b_time_us);
     else lv_label_set_text(tof_label, "--.--");
     if (current_frame.count) lv_label_set_text_fmt(gain_label, "0x%02X", current_frame.gain);
     else lv_label_set_text(gain_label, "----");

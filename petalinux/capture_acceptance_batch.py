@@ -10,12 +10,24 @@ import uuid
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError
 
 from board_acceptance import BoardClient, validate_token
 from monitor_camera_readonly import direct_link_guard
 
 
 ROLES = ("UNDRILLED_REFERENCE", "HOLE_TARGET", "NORMAL_CONTROL")
+FRAME_NOT_READY = "No fresh live waveform; reading never starts or renews acquisition"
+
+
+def frame_not_ready(error):
+    if error.code != 400:
+        return False
+    try:
+        body = error.read(4097)
+        return len(body) <= 4096 and json.loads(body) == {"error": FRAME_NOT_READY}
+    except (ValueError, UnicodeError, OSError):
+        return False
 
 
 class ReadOnlyBoardClient(BoardClient):
@@ -116,12 +128,29 @@ def record_batch(client, output, labels, *, frame_count=5, duration=12., interva
                 "raw_representation": "ADC_CODES_FROM_AUTHENTICATED_LIVE_WAVEFORM_API",
                 "overrange_representation": "FRAME_AGGREGATE_REPEATED_IN_CSV_COLUMN",
                 "known_labels_used_for_prediction": False, "acquisition_started_or_renewed_by_recorder": False,
-                "raw_binary_header_hash_verified": False, "frames": [], "status": "RECORDING"}
+                "raw_binary_header_hash_verified": False, "frames": [], "status": "RECORDING",
+                "http_read_errors": [], "transient_read_retries": 0}
     seen, boot_id, gain, last_timestamp = {}, None, None, 0
     failure = None
     try:
         while len(metadata["frames"]) < frame_count and clock() - start < duration:
-            payload = client.read_json("/api/live/waveform")
+            try:
+                payload = client.read_json("/api/live/waveform")
+            except HTTPError as error:
+                waiting = frame_not_ready(error)
+                metadata["http_read_errors"].append({"status_code": error.code,
+                    "reason": FRAME_NOT_READY if waiting else "UNCLASSIFIED_HTTP_ERROR"})
+                if not waiting:
+                    raise
+                current_device = client.read_json("/api/device")
+                if current_device.get("service_session") != session:
+                    raise ValueError("Service restarted while waiting for a fresh frame") from error
+                current_capture = current_device.get("real_capture", {})
+                if current_capture.get("active") is not True or current_capture.get("state") != "RUNNING":
+                    raise ValueError("Acquisition stopped while waiting; this recorder never starts or renews acquisition") from error
+                metadata["transient_read_retries"] += 1
+                sleeper(interval)
+                continue
             current_boot, record = verified_frame(payload)
             frame_id = payload["frame_id"]
             fingerprint = (record["sample_sha256"], record["monotonic_ns"], record["gain_code"], record["overrange"])
@@ -160,6 +189,7 @@ def record_batch(client, output, labels, *, frame_count=5, duration=12., interva
         raise failure
     return {"status": metadata["status"], "frames_saved": len(metadata["frames"]),
             "elapsed_seconds": metadata["elapsed_seconds"], "diagnoses": metadata["diagnosis_counts"],
+            "transient_read_retries": metadata["transient_read_retries"],
             "directory": str(output), "can_release_probe": True}
 
 

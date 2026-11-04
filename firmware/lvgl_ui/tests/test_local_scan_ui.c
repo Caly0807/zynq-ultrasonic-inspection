@@ -8,6 +8,7 @@ static uint32_t draw_buffer[800U * 48U], screen[800U * 480U];
 static uint8_t preview[UT_LOCAL_PREVIEW_BYTES];
 static unsigned calls;
 static ut_local_action_t last_action;
+static float last_parameter;
 
 static void local_action(ut_local_action_t action, float position_x, float position_y)
 {
@@ -15,6 +16,7 @@ static void local_action(ut_local_action_t action, float position_x, float posit
     (void)position_y;
     calls++;
     last_action = action;
+    last_parameter = position_x;
 }
 
 static void flush(lv_display_t *display, const lv_area_t *area, uint8_t *pixels)
@@ -62,7 +64,17 @@ int main(int argument_count, char **arguments)
     assert(calls == 1 && last_action == UT_LOCAL_FREEZE);
     press("真实波形");
     assert(calls == 2 && last_action == UT_LOCAL_LIVE);
-    ut_local_scan_t state = {.flags = 55, .phase = 1, .reason = 7, .width = 640, .height = 480,
+    ut_local_scan_t registration = {.flags = 3, .phase = 0, .reason = 15, .width = 640, .height = 480, .total = 256};
+    ut_local_scan_ui_update(&registration, NULL);
+    press("定位 1/5");
+    assert(calls == 3 && last_action == UT_LOCAL_PROBE_CAPTURE && last_parameter == 0);
+    registration.probe_points = 4;
+    ut_local_scan_ui_update(&registration, NULL);
+    press("定位 5/5");
+    assert(calls == 4 && last_action == UT_LOCAL_PROBE_CAPTURE && last_parameter == 4);
+    press("重置探头");
+    assert(calls == 5 && last_action == UT_LOCAL_PROBE_RESET);
+    ut_local_scan_t state = {.flags = 119, .phase = 1, .reason = 7, .width = 640, .height = 480, .probe_points = 5,
                              .sampled = 1, .total = 256, .valid = 1, .suspect = 1, .depths = 1,
                              .position_x = 40, .position_y = 40, .coverage = .390625f};
     ut_map_t map = {.columns = 16, .rows = 16, .length_mm = 80, .width_mm = 80, .thickness_mm = 30,
@@ -75,9 +87,9 @@ int main(int argument_count, char **arguments)
         preview[offset + 2] = 0x79;
     }
     ut_local_scan_ui_update(&state, preview);
-    assert(calls == 2 && find_caption(lv_screen_active(), "停止波形"));
+    assert(calls == 5 && find_caption(lv_screen_active(), "停止波形"));
     press("开始面扫");
-    assert(calls == 3 && last_action == UT_LOCAL_START);
+    assert(calls == 6 && last_action == UT_LOCAL_START);
     lv_refr_now(display);
     if (argument_count == 2) {
         FILE *output = fopen(arguments[1], "wb");
@@ -89,8 +101,13 @@ int main(int argument_count, char **arguments)
         }
         assert(fclose(output) == 0);
     }
+    state.flags = 151;
+    state.probe_points = 0;
+    lv_tick_inc(6000);
+    ut_local_scan_ui_update(&state, preview);
+    assert(find_caption(lv_screen_active(), "近似定位：覆盖仅作参考；五点接触配准可选"));
     press("结束二维");
-    assert(calls == 4 && last_action == UT_LOCAL_FINISH);
+    assert(calls == 7 && last_action == UT_LOCAL_FINISH);
     press("返回");
     assert(!ut_local_scan_ui_visible());
     lv_deinit();

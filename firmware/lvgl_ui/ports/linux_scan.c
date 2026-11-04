@@ -67,6 +67,7 @@ bool ut_linux_scan_read(const char *directory, uint64_t now, ut_local_scan_t *st
     incoming.suspect = integer32(data + 48);
     incoming.depths = integer32(data + 52);
     incoming.sequence = integer32(data + 56);
+    incoming.probe_points = integer32(data + 60);
     incoming.position_x = number32(data + 64);
     incoming.position_y = number32(data + 68);
     incoming.coverage = number32(data + 72);
@@ -75,7 +76,9 @@ bool ut_linux_scan_read(const char *directory, uint64_t now, ut_local_scan_t *st
         incoming.corners[index] = number32(data + 80 + index * 4);
         if (!isfinite(incoming.corners[index]) || incoming.corners[index] < -1 || incoming.corners[index] >= 1) return false;
     }
-    if (incoming.flags > 63 || incoming.phase > 2 || incoming.reason > 14 || incoming.corner_count > 4 ||
+    if (incoming.flags > 255 || incoming.phase > 2 || incoming.reason > 15 || incoming.corner_count > 4 || incoming.probe_points > 5 ||
+        ((incoming.flags & 64U) && (!(incoming.flags & 2U) || incoming.probe_points != 5)) ||
+        ((incoming.flags & 128U) && (!(incoming.flags & 2U) || (incoming.flags & 64U))) ||
         !incoming.total || incoming.total > 1024 || incoming.sampled > incoming.total || incoming.valid > incoming.sampled ||
         incoming.suspect > incoming.sampled || incoming.depths > 2048 ||
         !isfinite(incoming.coverage) || incoming.coverage < 0 || incoming.coverage > 100 ||
@@ -112,6 +115,11 @@ bool ut_linux_scan_command(const char *directory, ut_local_action_t action, floa
         name = "corner";
         snprintf(payload, sizeof(payload), "{\"x\":%.8f,\"y\":%.8f}", (double)position_x, (double)position_y);
     } else if (action == UT_LOCAL_CALIBRATE) { name = "calibrate"; strcpy(payload, "{\"fixed_confirmed\":true}"); }
+    else if (action == UT_LOCAL_PROBE_CAPTURE) {
+        if (!isfinite(position_x) || position_x < 0 || position_x > 4 || position_x != floorf(position_x)) return false;
+        name = "probe-capture";
+        snprintf(payload, sizeof(payload), "{\"point_index\":%u,\"contact_confirmed\":true,\"fixed_pose_confirmed\":true}", (unsigned)position_x);
+    } else if (action == UT_LOCAL_PROBE_RESET) { name = "probe-reset"; strcpy(payload, "{}"); }
     else if (action == UT_LOCAL_START) {
         name = "scan-start";
         strcpy(payload, "{\"tracking_confirmed\":true,\"normal_incidence_confirmed\":true}");

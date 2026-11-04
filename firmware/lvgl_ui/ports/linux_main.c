@@ -36,6 +36,7 @@ static bool waveform_seen, map_seen;
 static const char *live_directory;
 static char live_owner[37];
 static bool live_requested;
+static uint64_t live_read_attempts, live_read_failures, live_view_updates;
 static uint64_t confirmation_deadline, last_keepalive;
 static uint64_t live_started, scan_confirmation_deadline;
 static uint64_t new_scan_confirmation_deadline;
@@ -71,12 +72,11 @@ static void reload_live(void)
         last_keepalive = now;
     }
     ut_frame_t incoming;
-    if (ut_linux_live_read(live_directory, now, &incoming)) {
-        frame = incoming;
-        ut_ui_update(&frame);
-    } else if (frame.source == UT_SOURCE_LIVE) {
-        memset(&frame, 0, sizeof(frame));
-        frame.source = UT_SOURCE_WAITING;
+    live_read_attempts++;
+    bool received = ut_linux_live_read(live_directory, 0, &incoming);
+    if (!received) live_read_failures++;
+    if (ut_linux_live_present(&frame, received ? &incoming : NULL, monotonic_ns())) {
+        live_view_updates++;
         ut_ui_update(&frame);
     }
 }
@@ -156,9 +156,13 @@ static void publish_runtime_status(bool headless)
     clock_gettime(CLOCK_MONOTONIC, &current);
     bool written = fprintf(output,
         "{\"schema\":\"ut-lcd-status/1\",\"mode\":\"%s\",\"updated_monotonic_ns\":%llu,"
-        "\"flushes\":%llu,\"map_points\":%u,\"waveform_source\":%u,\"touch\":",
+        "\"flushes\":%llu,\"map_points\":%u,\"waveform_source\":%u,"
+        "\"waveform_sequence\":%u,\"waveform_stale\":%s,\"live_read_attempts\":%llu,"
+        "\"live_read_failures\":%llu,\"live_view_updates\":%llu,\"touch\":",
         headless ? "HEADLESS_ONLY" : "LCD_TRANSPORT", (unsigned long long)current.tv_sec * 1000000000ULL + current.tv_nsec,
-        (unsigned long long)flushes, (unsigned)scan_map.point_count, (unsigned)frame.source) > 0;
+        (unsigned long long)flushes, (unsigned)scan_map.point_count, (unsigned)frame.source,
+        frame.sequence, frame.live_stale ? "true" : "false", (unsigned long long)live_read_attempts,
+        (unsigned long long)live_read_failures, (unsigned long long)live_view_updates) > 0;
     written = ut_linux_touch_write_status(output) && written;
     written = fputs("}\n", output) >= 0 && written;
     int closed = fclose(output);
@@ -171,7 +175,8 @@ static void reload_files(void)
     ut_frame_t incoming;
     ut_map_t incoming_map;
     struct stat current;
-    if (changed(waveform_path, &waveform_stamp, waveform_seen, &current) &&
+    if (!live_requested && frame.source != UT_SOURCE_LIVE &&
+        changed(waveform_path, &waveform_stamp, waveform_seen, &current) &&
         ut_load_csv(waveform_path, &incoming, error, sizeof(error))) {
         waveform_seen = true;
         waveform_stamp = current;
@@ -183,7 +188,7 @@ static void reload_files(void)
         map_stamp = current;
         scan_map = incoming_map;
         ut_ui_update_map(&scan_map);
-        if (!scan_map.point_count) {
+        if (!scan_map.point_count && !live_requested && frame.source != UT_SOURCE_LIVE) {
             memset(&frame, 0, sizeof(frame));
             frame.source = UT_SOURCE_WAITING;
             ut_ui_update(&frame);

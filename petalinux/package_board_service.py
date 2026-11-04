@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE_MODULES = ("__init__", "records", "echo", "echo_reference", "scan", "mapping", "mapping_app", "network", "device_app", "board_capture", "board_health", "basic_vision")
+CORE_MODULES = ("__init__", "records", "echo", "echo_reference", "scan", "mapping", "mapping_app", "network", "device_app", "board_capture", "board_health", "basic_vision", "specimen_reference")
 VISION_MODULES = ("camera", "vision", "workpiece", "workpiece_config", "workpiece_app", "device_vision")
 
 
@@ -40,7 +40,8 @@ def build_bundle(destination, with_vision=False, with_live=False, normal_referen
         "diagnostic_dma_transport": "EXPLICIT_GUARDED_SINGLE_SHOT_V2" if with_live else "EXPLICIT_TEST_ONLY_NO_TRANSMIT_ABI",
         "with_live": with_live, "automatic_transmit_on_boot": False,
         "normal_reference_id": reference_id, "normal_reference_approves_calibration": False,
-        "basic_vision": "STDLIB_FOUR_CORNER_AND_RED_MARKER_WITH_NATIVE_YUYV_HELPER",
+        "basic_vision": "STDLIB_FOUR_CORNER_AND_CENTER_BLACK_DOT_WITH_UTCAM3_HELPER",
+        "basic_vision_native_protocol": "UTCAM3",
         "files": {name: {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)} for name, data in content.items()},
     }
     content["manifest.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")

@@ -1,16 +1,18 @@
 import copy
 import hashlib
+import io
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.error import HTTPError
 
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "petalinux"))
 sys.path.insert(0, str(ROOT / "firmware/inspection"))
-from capture_acceptance_batch import ReadOnlyBoardClient, record_batch, verified_frame, waveform_csv
+from capture_acceptance_batch import FRAME_NOT_READY, ReadOnlyBoardClient, record_batch, verified_frame, waveform_csv
 from utinspect.echo import load_csv
 
 
@@ -57,7 +59,10 @@ class FakeClient:
                     "real_capture": {"active": self.active, "state": "RUNNING" if self.active else "STOPPED"}}
         if route != "/api/live/waveform":
             raise AssertionError("Unexpected API operation")
-        return next(self.frames)
+        payload = next(self.frames)
+        if isinstance(payload, Exception):
+            raise payload
+        return payload
 
 
 class AcceptanceBatchTests(unittest.TestCase):
@@ -96,6 +101,80 @@ class AcceptanceBatchTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             result = self.record(FakeClient([frame(1), frame(1), frame(2)]), Path(directory) / "batch")
             self.assertEqual(result["frames_saved"], 2)
+
+    def test_fresh_frame_gap_retries_only_read_operations(self):
+        error = HTTPError("http://192.168.77.2:8766/api/live/waveform", 400, "Bad Request", {},
+                          io.BytesIO(json.dumps({"error": FRAME_NOT_READY}).encode()))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "batch"
+            client = FakeClient([frame(1), error, frame(1), frame(2)])
+            result = self.record(client, output)
+            self.assertEqual(result["status"], "COMPLETE")
+            self.assertEqual(result["transient_read_retries"], 1)
+            self.assertEqual(result["frames_saved"], 2)
+            self.assertTrue(set(client.calls) <= {"/api/device", "/api/live/waveform"})
+            metadata = json.loads((output / "acquisition.json").read_text(encoding="utf-8"))
+            self.assertEqual(metadata["http_read_errors"], [{"status_code": 400, "reason": FRAME_NOT_READY}])
+
+    def test_unknown_and_authorization_errors_are_not_retried(self):
+        for status, body in ((400, b'{"error":"unknown failure"}'), (400, b'not json'),
+                             (400, b'x' * 4097), (401, b'{}'), (403, b'{}'), (500, b'{}')):
+            with self.subTest(status=status, length=len(body)), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "batch"
+                error = HTTPError("http://192.168.77.2:8766/api/live/waveform", status, "Failure", {}, io.BytesIO(body))
+                client = FakeClient([frame(1), error, frame(2)])
+                with self.assertRaises(HTTPError):
+                    self.record(client, output)
+                metadata = json.loads((output / "acquisition.json").read_text(encoding="utf-8"))
+                self.assertEqual(metadata["status"], "ABORTED")
+                self.assertEqual(len(metadata["frames"]), 1)
+                self.assertEqual(metadata["transient_read_retries"], 0)
+                self.assertEqual(metadata["http_read_errors"][0]["status_code"], status)
+                self.assertEqual(client.device_reads, 1)
+
+    def test_restart_during_fresh_frame_gap_aborts(self):
+        error = HTTPError("http://192.168.77.2:8766/api/live/waveform", 400, "Bad Request", {},
+                          io.BytesIO(json.dumps({"error": FRAME_NOT_READY}).encode()))
+        with tempfile.TemporaryDirectory() as directory:
+            client = FakeClient([frame(1), error], final_session="restarted")
+            with self.assertRaisesRegex(ValueError, "restarted"):
+                self.record(client, Path(directory) / "batch")
+
+    def test_stopped_capture_is_not_rearmed_after_fresh_frame_gap(self):
+        class StoppingClient(FakeClient):
+            def read_json(self, route):
+                try:
+                    return super().read_json(route)
+                except HTTPError:
+                    self.active = False
+                    raise
+
+        error = HTTPError("http://192.168.77.2:8766/api/live/waveform", 400, "Bad Request", {},
+                          io.BytesIO(json.dumps({"error": FRAME_NOT_READY}).encode()))
+        with tempfile.TemporaryDirectory() as directory:
+            client = StoppingClient([frame(1), error])
+            with self.assertRaisesRegex(ValueError, "stopped"):
+                self.record(client, Path(directory) / "batch")
+            self.assertTrue(set(client.calls) <= {"/api/device", "/api/live/waveform"})
+
+    def test_persistent_fresh_frame_gap_obeys_deadline(self):
+        class WaitingClient(FakeClient):
+            def read_json(self, route):
+                if route == "/api/live/waveform":
+                    self.calls.append(route)
+                    raise HTTPError("http://192.168.77.2:8766/api/live/waveform", 400, "Bad Request", {},
+                                    io.BytesIO(json.dumps({"error": FRAME_NOT_READY}).encode()))
+                return super().read_json(route)
+
+        with tempfile.TemporaryDirectory() as directory:
+            clock = Clock()
+            client = WaitingClient([])
+            result = record_batch(client, Path(directory) / "batch", labels(), frame_count=2,
+                                  duration=1., clock=clock.now, sleeper=clock.sleep)
+            self.assertEqual(result["status"], "INCOMPLETE")
+            self.assertEqual(result["frames_saved"], 0)
+            self.assertGreater(result["transient_read_retries"], 0)
+            self.assertLess(clock.value, 2.)
 
     def test_gain_change_aborts_and_preserves_first_frame(self):
         changed = frame(2)

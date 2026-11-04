@@ -169,6 +169,9 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                     self.send_data((ROOT / "web/inspection.html").read_bytes(), "text/html; charset=utf-8")
                 elif route.path == "/vision" and vision is not None:
                     self.send_data((ROOT / "web/camera_basic.html").read_bytes(), "text/html; charset=utf-8")
+                elif route.path == "/api/vision/reference" and vision is not None:
+                    query = parse_qs(route.query)
+                    self.send_json(vision.reference_overlay(query.get("specimen", [""])[0], query.get("h1_end", [""])[0]))
                 elif route.path == "/api/vision/state" and vision is not None:
                     self.send_json(vision.state())
                 elif route.path == "/api/vision/frame.png" and vision is not None:
@@ -241,9 +244,11 @@ def make_map_handler(session, capture=None, stop_event=None, *, access_policy=No
                 if route == "/api/transport/selftest" and transport_test is not None:
                     self.send_json(transport_test(payload))
                     return
-                if vision is not None and route in ("/api/vision/freeze", "/api/vision/calibrate", "/api/vision/clear"):
+                if vision is not None and route in ("/api/vision/freeze", "/api/vision/calibrate", "/api/vision/clear",
+                                                     "/api/vision/probe/capture", "/api/vision/probe/reset", "/api/vision/resume"):
                     action = {"/api/vision/freeze": vision.freeze, "/api/vision/calibrate": lambda: vision.calibrate(payload),
-                              "/api/vision/clear": vision.clear}[route]
+                              "/api/vision/clear": vision.clear, "/api/vision/probe/capture": lambda: vision.capture_probe_reference(payload),
+                              "/api/vision/probe/reset": vision.reset_probe_reference, "/api/vision/resume": vision.resume}[route]
                     self.send_json(action())
                     return
                 if route == "/api/stop":

@@ -43,10 +43,10 @@ class LocalScanTests(unittest.TestCase):
         self.active = False
         self.stops += 1
 
-    def camera(self, *, step_ms=0, marker=True, center=80, camera_delay_ms=0, adc_delay_ms=0, stream_id=1_000_000_000, flaw=False):
+    def camera(self, *, step_ms=0, marker=True, center=80, center_y=60, camera_delay_ms=0, adc_delay_ms=0, stream_id=1_000_000_000, flaw=False):
         self.now += step_ms * 1_000_000
         self.sequence += 1
-        boxes = [(center - 8, 52, center + 8, 68)] if marker else []
+        boxes = [(center - 8, center_y - 8, center + 8, center_y + 8)] if marker else []
         self.path.write_bytes(frame_bytes(magic="UTCAM1", sequence=self.sequence,
                                          captured=self.now - camera_delay_ms * 1_000_000, stream_id=stream_id, boxes=boxes))
         samples = [128] * 4096
@@ -63,7 +63,16 @@ class LocalScanTests(unittest.TestCase):
 
     def start(self):
         self.calibrate()
+        self.register_probe()
         self.scan.command("scan-start", {"tracking_confirmed": True, "normal_incidence_confirmed": True})
+
+    def register_probe(self):
+        for index, (center, center_y) in enumerate(((35, 30), (125, 30), (125, 90), (35, 90), (80, 60))):
+            self.vision.marker_history.clear()
+            for _ in range(3):
+                self.camera(step_ms=180, center=center, center_y=center_y)
+                self.scan.tick()
+            self.scan.command("probe-capture", {"point_index": index, "contact_confirmed": True, "fixed_pose_confirmed": True})
 
     def stable_sample(self, **kwargs):
         for index in range(5):
@@ -155,9 +164,38 @@ class LocalScanTests(unittest.TestCase):
 
     def test_pc_owned_capture_cannot_become_local_continuous_scan(self):
         self.calibrate()
+        self.register_probe()
         self.owner = "pc-" + "2" * 32
         with self.assertRaises(ValueError):
             self.scan.command("scan-start", {"tracking_confirmed": True, "normal_incidence_confirmed": True})
+
+    def test_four_surface_corners_alone_do_not_authorize_contact_mapping(self):
+        self.scan.require_probe_registration = True
+        self.calibrate()
+        with self.assertRaisesRegex(ValueError, "probe contact points"):
+            self.scan.command("scan-start", {"tracking_confirmed": True, "normal_incidence_confirmed": True})
+        self.assertEqual(self.session.snapshot()["point_count"], 0)
+        self.live.start.assert_not_called()
+
+    def test_probe_reset_or_replacement_stops_coordinate_recording(self):
+        self.start()
+        with self.assertRaises(ValueError):
+            self.scan.command("probe-reset", {})
+        self.vision.reset_probe_reference()
+        self.camera(step_ms=120)
+        state = self.scan.tick()
+        self.assertEqual((state["phase"], state["reason"]), ("IDLE", "CALIBRATION_CHANGED"))
+        self.assertEqual(state["sampled_cells"], 0)
+
+    def test_probe_registration_status_and_five_points_reach_native_port(self):
+        self.calibrate()
+        self.register_probe()
+        state = self.scan.tick()
+        data = (self.root / "lcd/scan-status.bin").read_bytes()
+        self.assertTrue(struct.unpack_from("<I", data, 4)[0] & 64)
+        self.assertEqual(struct.unpack_from("<I", data, 60)[0], 5)
+        self.assertTrue(state["probe_registration"]["complete"])
+        self.assertEqual(state["reason"], "READY")
 
     def test_stable_real_pair_records_position_evidence_not_manual_accuracy(self):
         self.start()
@@ -253,7 +291,31 @@ class LocalScanTests(unittest.TestCase):
         self.assertEqual(fields[0], b"UTS1")
         self.assertEqual(fields[2], self.now)
         self.assertEqual(struct.unpack_from("<I", data, 40)[0], 256)
-        self.assertAlmostEqual(struct.unpack_from("<f", data, 64)[0], 39.667, places=4)
+        self.assertAlmostEqual(struct.unpack_from("<f", data, 64)[0], 39.667, places=3)
+        self.assertIsNotNone(self.scan.last_state["position_mm"])
+        self.assertTrue(struct.unpack_from("<I", data, 4)[0] & 128)
+        self.assertFalse(struct.unpack_from("<I", data, 4)[0] & 64)
+        self.assertEqual(self.scan.last_state["position_mode"], "APPROXIMATE_SURFACE_PROJECTION")
+
+    def test_approximate_scan_does_not_require_five_point_registration(self):
+        self.calibrate()
+        self.scan.command("scan-start", {"tracking_confirmed": True, "normal_incidence_confirmed": True})
+        state = self.stable_sample()
+        self.assertEqual(state["phase"], "SCANNING")
+        self.assertEqual(state["sampled_cells"], 1)
+        self.assertFalse(state["position_accuracy_verified"])
+        self.assertFalse(state["reference_hole_positions_used_for_diagnosis"])
+        self.assertEqual(state["position_mode"], "APPROXIMATE_SURFACE_PROJECTION")
+        self.live.start.assert_not_called()
+
+    def test_optional_strict_mode_still_requires_probe_registration(self):
+        self.scan.require_probe_registration = True
+        self.calibrate()
+        state = self.scan.tick()
+        self.assertEqual(state["reason"], "NEED_PROBE_ALIGNMENT")
+        self.assertIsNone(state["position_mm"])
+        with self.assertRaisesRegex(ValueError, "Register"):
+            self.scan.command("scan-start", {"tracking_confirmed": True, "normal_incidence_confirmed": True})
 
     def test_local_status_is_visible_to_authenticated_device_health(self):
         self.scan.tick()

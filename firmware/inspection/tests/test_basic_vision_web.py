@@ -13,13 +13,14 @@ let input = '';
 process.stdin.setEncoding('utf8');process.stdin.on('data', chunk => input += chunk);
 process.stdin.on('end', async () => {
   try {
-    const fixture = JSON.parse(input), nodes = new Map(), operations = [], timers = [], markerArcs = [];
+    const fixture = JSON.parse(input), nodes = new Map(), operations = [], timers = [], markerArcs = [], referenceArcs = [];
     const drawings = new Proxy({}, {get: (target, key) => target[key] || ((...arguments) => {
       for (const value of arguments) if (typeof value === 'number') assert(Number.isFinite(value), key);
       if(key==='arc'&&arguments[2]===14)markerArcs.push(arguments);
+      if(key==='arc'&&arguments[2]===20)referenceArcs.push(arguments);
     })});
     function element(identifier) {
-      return {identifier, style:{}, checked:false, disabled:false, textContent:'', className:'', events:{},
+      return {identifier, value:'', style:{}, checked:false, disabled:false, textContent:'', className:'', events:{},
         width:640, height:480, getContext:()=>drawings, getBoundingClientRect:()=>({left:0,top:0,width:640,height:480}),
         addEventListener(name, callback){this.events[name]=callback;}, click(){operations.push(['download',this.download]);},
         toBlob(callback){callback({fixture:true});}};
@@ -36,12 +37,26 @@ process.stdin.on('end', async () => {
         operations.push([options.method||'GET',route,options.body]);
         if (failed) return {ok:false,json:async()=>({error:'Device login required'})};
         if (route.startsWith('/api/vision/frame.png')) return {ok:true,blob:async()=>({fixture:true})};
+        if (route.startsWith('/api/vision/reference?')) return {ok:true,json:async()=>({reference_only:true,feeds_diagnosis:false,
+          projected:current.calibrated,surface_calibration_id:current.surface_calibration_id,specimen_id:'UT45-02-R3',
+          holes:[{surface_pixel:[200,240],hole_id:'H1',nominal_diameter_mm:3,nominal_depth_from_A_mm:8}]})};
         if (route==='/api/vision/freeze') current.selection={...current.frame,calibration_id:'fixture-selection'};
+        if (route==='/api/vision/resume') delete current.selection;
         if (route==='/api/vision/calibrate') {
           const payload=JSON.parse(options.body);assert.equal(payload.fixed_confirmed,true);assert.equal(payload.corners.length,4);
           assert.equal(payload.calibration_id,'fixture-selection');
           current.calibrated=true;current.position_mm=[40,40];current.corners=payload.corners;delete current.selection;
+          current.surface_calibration_id='surface-fixture';
+          current.probe_registration={complete:false,point_count:0,stable:false,next_contact_mm:[10,10],next_surface_pixel:[100,100]};
         }
+        if (route==='/api/vision/probe/capture') {
+          const payload=JSON.parse(options.body);assert.equal(payload.point_index,current.probe_registration.point_count);
+          assert.equal(payload.contact_confirmed,true);assert.equal(payload.fixed_pose_confirmed,true);
+          current.probe_registration.point_count++;current.probe_registration.stable=false;
+          current.probe_registration.complete=current.probe_registration.point_count===5;
+          current.probe_registration.center_error_mm=current.probe_registration.complete?0:null;
+        }
+        if (route==='/api/vision/probe/reset') current.probe_registration={complete:false,point_count:0,stable:false,next_contact_mm:[10,10]};
         if (route==='/api/vision/clear'){current.calibrated=false;current.position_mm=null;delete current.corners;delete current.selection;}
         return {ok:true,json:async()=>copy(current)};
       }
@@ -60,6 +75,21 @@ process.stdin.on('end', async () => {
     assert(nodes.get('calibrate').disabled);nodes.get('fixed').checked=true;nodes.get('fixed').onchange();
     assert(!nodes.get('calibrate').disabled);await nodes.get('calibrate').onclick();await settled();
     assert.equal(nodes.get('positionX').textContent,'40.0');assert(nodes.get('resume').disabled);
+    assert(nodes.get('probeCapture').disabled);
+    for(let index=0;index<5;index++){
+      current.probe_registration.stable=true;await refresh();nodes.get('probePose').checked=true;nodes.get('probePose').onchange();
+      assert(!nodes.get('probeCapture').disabled);await nodes.get('probeCapture').onclick();await settled();
+      assert(!nodes.get('probePose').checked);assert(nodes.get('probeCapture').disabled);
+    }
+    assert(nodes.get('probeGuide').textContent.includes('校准完成'));
+    const beforeReference=referenceArcs.length;
+    nodes.get('specimen').value='UT45-02-R3';await nodes.get('specimen').onchange();await settled();
+    assert.equal(referenceArcs.length,beforeReference);assert(nodes.get('referenceInfo').textContent.includes('先确认'));
+    nodes.get('h1End').value='X20';await nodes.get('h1End').onchange();await settled();
+    assert(referenceArcs.length>beforeReference);assert(nodes.get('referenceInfo').textContent.includes('不代表实测'));
+    await nodes.get('probeReset').onclick();await settled();assert.equal(current.probe_registration.point_count,0);
+    nodes.get('specimen').value='';await nodes.get('specimen').onchange();await settled();
+    assert(nodes.get('referenceInfo').textContent.includes('关闭'));
     current.frame.frame_id='camera-2';current.marker={status:'AMBIGUOUS',pixel:null};current.position_mm=null;
     await refresh();assert.equal(nodes.get('positionX').textContent,'—');assert(nodes.get('status').textContent.includes('多个'));
     const previousArcs=markerArcs.length;
@@ -71,7 +101,8 @@ process.stdin.on('end', async () => {
     assert.equal(nodes.get('placeholder').style.display,'grid');assert(nodes.get('status').textContent.includes('Device login required'));
     failed=false;current={preview_available:false,source:'UNAVAILABLE',calibrated:false,position_mm:null,error:'Camera disconnected'};
     await refresh();assert(nodes.get('freeze').disabled);assert(nodes.get('save').disabled);
-    assert(operations.every(item=>item[0]!=='POST'||['/api/vision/freeze','/api/vision/calibrate','/api/vision/clear'].includes(item[1])));
+    assert(operations.every(item=>item[0]!=='POST'||['/api/vision/freeze','/api/vision/calibrate','/api/vision/clear',
+      '/api/vision/probe/capture','/api/vision/probe/reset','/api/vision/resume'].includes(item[1])));
     console.log('BASIC_VISION_BROWSER_LOGIC_PASSED; no camera, acquisition, HV or motion opened');
   } catch(error) { console.error(error);process.exitCode=1; }
 });

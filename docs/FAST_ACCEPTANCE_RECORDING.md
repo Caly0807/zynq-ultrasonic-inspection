@@ -18,7 +18,7 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File petalinux/record_acceptance.ps1 -Specimen UT45-02-R3 -Placement d8_p1 -Role HOLE_TARGET -Hole h1 -NominalDepth 8 -OutputDirectory firmware/inspection/runs/accept_d8_p1 -RecouplingConfirmed
 ```
 
-`-ExecutionPolicy Bypass` 只作用于这一次脚本进程，不更改系统执行策略。默认五帧、12秒截止；可用 `-Frames`、`-Deadline` 在规定范围内调整。HTTP正在响应的单次读取有8秒网络超时，因此总体截止可能被最后一次在途请求增加最多约8秒；实际耗时写入JSON。
+`-ExecutionPolicy Bypass` 只作用于这一次脚本进程，不更改系统执行策略。默认五帧、12秒软截止；可用 `-Frames`、`-Deadline` 在规定范围内调整。单次HTTP读取有8秒网络超时，进行中的读帧与状态复核可能使总耗时超过软截止，因此不承诺严格12秒结束；实际耗时写入JSON。
 
 孔旁正常区把 `-Role` 改为 `NORMAL_CONTROL`，孔ID仍可保留，使用新的摆位ID和目录。完整块用 `UNDRILLED_REFERENCE`，不要把孔上记录标成完整块。
 
@@ -39,6 +39,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File petalinux/record_acceptance.
 每批保存 `frame_001.csv` 等文件及 `acquisition.json`。样本SHA256与板端记录核对，CSV保存哈希独立记录；TEST/PASSIVE、重复ID内容改变、增益/启动身份改变、采样时间倒退被拒绝。质量无效帧照样保存，避免只留下好看的数据。中途错误保留已写文件，状态为 `ABORTED`；帧数不足为 `INCOMPLETE`。不会覆盖旧目录。
 
 CSV中的OTR是整帧聚合标志重复填入列，不是逐样本过量程轨迹。记录保留板端诊断和未批准标定状态。标签只进入采录元数据，不参与预测；原始二进制头未通过此GET接口提供，因此不声称核验了二进制头哈希。
+
+### 读帧间隙与中断
+
+仅当波形接口返回400且正文严格等于已知的“No fresh live waveform; reading never starts or renews acquisition”，并且再次只读检查确认同一服务仍处于RUNNING时，录入工具才在原截止时间内等待重试。重试次数及固定错误原因写入`acquisition.json`。不会开始、保活或重启采集，不把旧帧计作新帧。
+
+其他400、401/403、服务器错误、服务身份变化或采集停止均中断并保留已有帧。未知响应正文不会原样写入记录，避免泄露接口可能返回的敏感信息。没有达到请求帧数的批次不记作完成，不能把几次失败拼成一次独立摆位。
+
+2026-11-02现场两次400未保存响应正文，因而不能确定属于上述已知间隙。此补丁是有条件恢复和错误记录的完善，不等于已锁定或修复所有400的根因。
 
 软件测试使用合成数据，不访问设备：
 

@@ -14,6 +14,8 @@ from pathlib import Path
 MAX_FRAME_BYTES = 1280 * 720 * 3 + 256
 MAX_AGE_NS = 2_500_000_000
 SELECTION_AGE_NS = 120_000_000_000
+POSITION_AGE_NS = 300_000_000
+PROBE_STABLE_NS = 350_000_000
 
 
 @dataclass(frozen=True)
@@ -48,13 +50,13 @@ def parse_frame(data, now_ns, allow_host_fixture=False):
     dimensions = lines[2].split()
     if len(tags) not in (5, 10) or tags[0] != b"#" or len(dimensions) != 2:
         raise ValueError("Invalid camera frame metadata")
-    if tags[1] in (b"UTCAM1", b"UTCAM2"):
+    if tags[1] in (b"UTCAM1", b"UTCAM2", b"UTCAM3"):
         source = "USB_CAMERA"
     elif tags[1] == b"UTHOST1" and allow_host_fixture:
         source = "HOST_FIXTURE"
     else:
         raise ValueError("Unsupported camera source; host fixtures are disabled on the board")
-    if (tags[1] == b"UTCAM2") != (len(tags) == 10):
+    if (tags[1] in (b"UTCAM2", b"UTCAM3")) != (len(tags) == 10):
         raise ValueError("Native camera metadata version and length disagree")
     values = tags[2:5] + dimensions
     if any(not value.isdigit() or len(value) > 20 for value in values):
@@ -69,14 +71,15 @@ def parse_frame(data, now_ns, allow_host_fixture=False):
     if not 0 <= now_ns - captured <= MAX_AGE_NS:
         raise ValueError("Camera frame is stale or belongs to a different monotonic clock")
     native_marker = None
-    if tags[1] == b"UTCAM2":
+    if tags[1] in (b"UTCAM2", b"UTCAM3"):
         if any(not value.isdigit() or len(value) > 12 for value in tags[5:]):
             raise ValueError("Invalid native marker integers")
         status, candidates, pixel_x, pixel_y, area = map(int, tags[5:])
-        if (status not in (1, 2, 3, 4) or candidates > width * height or area > width * height or
+        if (status not in ((1, 2, 3, 4, 5) if tags[1] == b"UTCAM3" else (1, 2, 3, 4)) or candidates > width * height or area > width * height or
                 pixel_x >= width * 1000 or pixel_y >= height * 1000 or
                 status == 1 and (candidates != 1 or not 6 <= area <= width * height * .12) or
                 status == 2 and candidates != 0 or status == 3 and candidates < 2 or
+                status == 5 and (candidates != 1 or not 9 <= area <= width * height * .005) or
                 status == 4 and (candidates != 1 or area <= width * height * .12)):
             raise ValueError("Invalid native marker geometry or classification")
         native_marker = (status, candidates, pixel_x / 1000.0, pixel_y / 1000.0, area)
@@ -140,14 +143,90 @@ def project_point(transform, pixel, width, height, length_mm, width_mm):
     return position
 
 
+def unproject_point(transform, position, width, height, length_mm, width_mm):
+    target_x, target_y = position[0] / length_mm, position[1] / width_mm
+    first = transform[0] - target_x * transform[6], transform[1] - target_x * transform[7]
+    second = transform[3] - target_y * transform[6], transform[4] - target_y * transform[7]
+    right_x, right_y = target_x - transform[2], target_y - transform[5]
+    determinant = first[0] * second[1] - first[1] * second[0]
+    if abs(determinant) < 1e-10:
+        raise ValueError("Position falls on a singular inverse projection")
+    pixel = [(right_x * second[1] - first[1] * right_y) / determinant * width,
+             (first[0] * right_y - right_x * second[0]) / determinant * height]
+    if not all(math.isfinite(value) for value in pixel):
+        raise ValueError("Invalid inverse projection")
+    return pixel
+
+
+def _center_dot_marker(frame):
+    step = max(1, math.ceil(max(frame.width, frame.height) / 240))
+    columns, rows = frame.width // step, frame.height // step
+    mask = bytearray(columns * rows)
+    for row in range(rows):
+        for column in range(columns):
+            offset = ((row * step + step // 2) * frame.width + column * step + step // 2) * 3
+            mask[row * columns + column] = max(frame.pixels[offset:offset + 3]) <= 80
+    candidates = []
+    for start in range(len(mask)):
+        if not mask[start]:
+            continue
+        mask[start] = 0
+        queue = deque([start])
+        count = sum_x = sum_y = 0
+        minimum_x, minimum_y, maximum_x, maximum_y = columns, rows, 0, 0
+        while queue:
+            row, column = divmod(queue.popleft(), columns)
+            count += 1
+            sum_x += column
+            sum_y += row
+            minimum_x, maximum_x = min(minimum_x, column), max(maximum_x, column)
+            minimum_y, maximum_y = min(minimum_y, row), max(maximum_y, row)
+            for next_row, next_column in ((row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)):
+                if 0 <= next_row < rows and 0 <= next_column < columns:
+                    index = next_row * columns + next_column
+                    if mask[index]:
+                        mask[index] = 0
+                        queue.append(index)
+        extent_x, extent_y = maximum_x - minimum_x + 1, maximum_y - minimum_y + 1
+        area = count * step * step
+        if (count < 3 or not 9 <= area <= frame.width * frame.height * .005 or
+                max(extent_x, extent_y) > min(extent_x, extent_y) * 2 or count * 4 < extent_x * extent_y):
+            continue
+        center = [sum_x / count * step + step // 2, sum_y / count * step + step // 2]
+        red_ring = 0
+        for direction_y in (-1, 0, 1):
+            for direction_x in (-1, 0, 1):
+                if direction_x == direction_y == 0:
+                    continue
+                sample_x = int(center[0]) + direction_x * (extent_x * step // 2 + step * 2)
+                sample_y = int(center[1]) + direction_y * (extent_y * step // 2 + step * 2)
+                if 0 <= sample_x < frame.width and 0 <= sample_y < frame.height:
+                    offset = (sample_y * frame.width + sample_x) * 3
+                    red, green, blue = frame.pixels[offset:offset + 3]
+                    red_ring += (red >= 110 and red - green >= 65 and red - blue >= 55 and
+                                 red * 100 > green * 170 and red * 100 > blue * 170)
+        if red_ring >= 6:
+            candidates.append({"pixel": center, "area_pixels": area})
+    if len(candidates) > 1:
+        return {"status": "AMBIGUOUS", "candidate_count": len(candidates), "pixel": None}
+    if candidates:
+        return {"status": "FOUND", "candidate_count": 1, "point_kind": "CENTER_BLACK_DOT", **candidates[0]}
+    return None
+
+
 def red_marker(frame):
     if frame.native_marker is not None:
         status, candidates, pixel_x, pixel_y, area = frame.native_marker
-        result = {"status": {1: "FOUND", 2: "NOT_FOUND", 3: "AMBIGUOUS", 4: "TOO_LARGE"}[status],
-                  "candidate_count": candidates, "pixel": [pixel_x, pixel_y] if status == 1 else None}
-        if status == 1:
+        result = {"status": {1: "FOUND", 2: "NOT_FOUND", 3: "AMBIGUOUS", 4: "TOO_LARGE", 5: "FOUND"}[status],
+                  "candidate_count": candidates, "pixel": [pixel_x, pixel_y] if status in (1, 5) else None}
+        if status in (1, 5):
             result["area_pixels"] = area
+        if status == 5:
+            result["point_kind"] = "CENTER_BLACK_DOT"
         return result
+    dot = _center_dot_marker(frame)
+    if dot is not None:
+        return dot
     step = max(1, math.ceil(max(frame.width, frame.height) / 240))
     columns, rows = frame.width // step, frame.height // step
     mask = bytearray(columns * rows)
@@ -194,24 +273,67 @@ def red_marker(frame):
 
 
 class BasicVision:
-    def __init__(self, frame_path, length_mm=80, width_mm=80, *, allow_host_fixture=False, clock=time.monotonic_ns):
+    def __init__(self, frame_path, length_mm=80, width_mm=80, *, allow_host_fixture=False, clock=time.monotonic_ns,
+                 require_center_dot=False):
         if not all(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0 for value in (length_mm, width_mm)):
             raise ValueError("Invalid workpiece dimensions")
         self.path = Path(frame_path)
         self.length_mm, self.width_mm = length_mm, width_mm
         self.allow_host_fixture, self.clock = allow_host_fixture, clock
+        self.require_center_dot = require_center_dot
         self.lock = threading.RLock()
         self.frames = {}
         self.latest = None
         self.selection = None
         self.selection_created_ns = 0
         self.calibration_id = None
+        self.surface_calibration_id = None
         self.transform = None
         self.corners = None
         self.marker_key = None
         self.marker = None
         self.png_key = None
         self.png = None
+        self._reset_probe()
+
+    def _reset_probe(self):
+        self.probe_samples = []
+        self.probe_transform = None
+        self.registration_id = None
+        self.marker_history = deque(maxlen=8)
+
+    def _probe_targets(self):
+        inset_x, inset_y = self.length_mm / 8, self.width_mm / 8
+        return [[inset_x, inset_y], [self.length_mm - inset_x, inset_y],
+                [self.length_mm - inset_x, self.width_mm - inset_y], [inset_x, self.width_mm - inset_y],
+                [self.length_mm / 2, self.width_mm / 2]]
+
+    def _track_marker(self, frame, marker, now):
+        if self.transform is None or marker.get("status") != "FOUND" or now - frame.captured_ns > POSITION_AGE_NS:
+            self.marker_history.clear()
+            return
+        while self.marker_history and frame.captured_ns - self.marker_history[0][1] > 1_500_000_000:
+            self.marker_history.popleft()
+        if not self.marker_history or self.marker_history[-1][0] != frame.frame_id:
+            self.marker_history.append((frame.frame_id, frame.captured_ns, list(marker["pixel"])))
+
+    def _probe_stable(self):
+        if len(self.marker_history) < 3 or self.marker_history[-1][1] - self.marker_history[0][1] < PROBE_STABLE_NS:
+            return False
+        positions = [project_point(self.transform, entry[2], self.latest.width, self.latest.height,
+                                   self.length_mm, self.width_mm) for entry in self.marker_history]
+        return all(math.dist(position, positions[-1]) <= 1.0 for position in positions)
+
+    def _probe_state(self):
+        count = len(self.probe_samples)
+        return {"complete": count == 5, "point_count": count, "total_points": 5,
+                "registration_id": self.registration_id, "contact_targets_mm": self._probe_targets(),
+                "next_contact_mm": self._probe_targets()[count] if count < 5 else None,
+                "next_surface_pixel": unproject_point(self.transform, self._probe_targets()[count], self.latest.width, self.latest.height,
+                                                      self.length_mm, self.width_mm) if self.transform is not None and count < 5 else None,
+                "stable": self._probe_stable(), "center_error_mm": self.probe_samples[-1].get("error_mm") if count == 5 else None,
+                "max_center_error_mm": 2.0, "pose": "FIXED_MARKER_HEIGHT_AND_NORMAL_PROBE_ORIENTATION",
+                "persistence": "MEMORY_ONLY_RECALIBRATE_AFTER_CAMERA_BLOCK_OR_MARKER_MOVES"}
 
     def _current(self):
         descriptor = os.open(self.path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0) | getattr(os, "O_NONBLOCK", 0))
@@ -225,7 +347,9 @@ class BasicVision:
                 raise ValueError("Camera timestamp regressed or a frame identity was reused")
             if self.latest and (frame.stream_id, frame.source, frame.width, frame.height) != (self.latest.stream_id, self.latest.source, self.latest.width, self.latest.height):
                 self.transform = self.corners = self.selection = self.calibration_id = None
+                self.surface_calibration_id = None
                 self.frames.clear()
+                self._reset_probe()
             self.latest = frame
             self.frames[frame.frame_id] = frame
             while len(self.frames) > 4:
@@ -242,6 +366,7 @@ class BasicVision:
                       "timing_basis": "HELPER_DEQUEUE_MONOTONIC_NOT_SENSOR_EXPOSURE_OR_ULTRASOUND_TRIGGER",
                       "workpiece_mm": [self.length_mm, self.width_mm], "physical_accuracy_verified": False,
                       "coordinate_use": "VISUAL_AID_ONLY_RECONFIRM_PROBE_BEFORE_EACH_ACQUISITION",
+                      "coordinate_basis": "RED_MARKER_SURFACE_PROJECTION_NOT_CONTACT_POINT",
                       "internal_damage_detection": False, "automatic_workpiece_detection": False}
             try:
                 frame, now = self._current()
@@ -251,19 +376,87 @@ class BasicVision:
                 if not 0 <= now - frame.captured_ns <= MAX_AGE_NS:
                     raise ValueError("Camera processing exceeded the frame freshness limit")
                 marker = dict(self.marker)
-                if marker["pixel"] is not None and self.transform is not None:
+                if self.require_center_dot and marker["status"] == "FOUND" and marker.get("point_kind") != "CENTER_BLACK_DOT":
+                    marker["status"] = "CENTER_DOT_MISSING"
+                if marker.get("point_kind") == "CENTER_BLACK_DOT":
+                    result["coordinate_basis"] = "BLACK_DOT_SURFACE_PROJECTION_NOT_CONTACT_POINT"
+                self._track_marker(frame, marker, now)
+                if marker["status"] == "FOUND" and now - frame.captured_ns > POSITION_AGE_NS:
+                    marker["status"] = "STALE_POSITION"
+                if marker["status"] == "FOUND" and self.transform is not None:
                     position = project_point(self.transform, marker["pixel"], frame.width, frame.height, self.length_mm, self.width_mm)
-                    if 0 <= position[0] <= self.length_mm and 0 <= position[1] <= self.width_mm:
+                    result["surface_projection_mm"] = [round(value, 3) for value in position]
+                    if self.registration_id is not None:
+                        position = self._probe_position(marker["pixel"], frame)
+                        result["coordinate_basis"] = "REGISTERED_PROBE_CONTACT_ESTIMATE"
+                    if -1e-7 <= position[0] <= self.length_mm + 1e-7 and -1e-7 <= position[1] <= self.width_mm + 1e-7:
+                        position = [min(self.length_mm, max(0, position[0])), min(self.width_mm, max(0, position[1]))]
                         result["position_mm"] = [round(value, 3) for value in position]
+                        if self.registration_id is not None:
+                            result["contact_pixel"] = unproject_point(self.transform, position, frame.width, frame.height,
+                                                                      self.length_mm, self.width_mm)
                     else:
                         marker["status"] = "OUTSIDE_WORKPIECE"
                 result.update(preview_available=True, source=frame.source, frame=frame.metadata(now), marker=marker,
-                              calibrated=self.transform is not None, corners=self.corners)
+                              calibrated=self.transform is not None, corners=self.corners, surface_calibration_id=self.surface_calibration_id)
                 if self.selection is not None and 0 <= now - self.selection_created_ns <= SELECTION_AGE_NS:
                     result["selection"] = {"calibration_id": self.calibration_id, **self.selection.metadata(now)}
             except (OSError, ValueError) as error:
+                self.marker_history.clear()
                 result["error"] = str(error)
+            result["probe_registration"] = self._probe_state()
             return result
+
+    def _probe_position(self, pixel, frame):
+        position = project_point(self.probe_transform, pixel, frame.width, frame.height,
+                                 self.length_mm * .75, self.width_mm * .75)
+        return [position[0] + self.length_mm / 8, position[1] + self.width_mm / 8]
+
+    def capture_probe_reference(self, payload):
+        with self.lock:
+            if (not isinstance(payload, dict) or set(payload) != {"point_index", "contact_confirmed", "fixed_pose_confirmed"} or
+                    type(payload["point_index"]) is not int or payload["point_index"] != len(self.probe_samples) or
+                    payload["point_index"] >= 5 or payload["contact_confirmed"] is not True or payload["fixed_pose_confirmed"] is not True):
+                raise ValueError("Confirm the next contact point and keep the probe upright with its marker fixed")
+            state = self.state()
+            if (not state.get("preview_available") or not state.get("calibrated") or self.selection is not None or
+                    state.get("marker", {}).get("status") != "FOUND" or state["frame"]["age_ms"] > 300 or not self._probe_stable()):
+                raise ValueError("Calibrate the surface, resume live preview, and hold one fresh red marker still for at least 350 ms")
+            pixel = [sum(entry[2][axis] for entry in self.marker_history) / len(self.marker_history) for axis in range(2)]
+            sample = {"contact_mm": self._probe_targets()[len(self.probe_samples)], "marker_pixel": pixel,
+                      "camera_frame_ids": [entry[0] for entry in self.marker_history]}
+            if len(self.probe_samples) == 3:
+                transform = solve_homography([entry["marker_pixel"] for entry in self.probe_samples] + [pixel],
+                                             self.latest.width, self.latest.height)
+                self.probe_transform = transform
+            elif len(self.probe_samples) == 4:
+                error = math.dist(self._probe_position(pixel, self.latest), sample["contact_mm"])
+                if error > 2.0:
+                    raise ValueError(f"Independent center check failed ({error:.2f} mm > 2 mm); reset probe registration and check the marks and pose")
+                sample["error_mm"] = round(error, 3)
+                self.registration_id = secrets.token_hex(16)
+            self.probe_samples.append(sample)
+            self.marker_history.clear()
+            return self.state()
+
+    def reset_probe_reference(self):
+        with self.lock:
+            self._reset_probe()
+            return self.state()
+
+    def reference_overlay(self, specimen, h1_end):
+        from .specimen_reference import hole_reference
+        with self.lock:
+            reference = hole_reference(specimen, h1_end, self.length_mm, self.width_mm)
+            state = self.state()
+            reference["projected"] = bool(state.get("preview_available") and state.get("calibrated"))
+            reference["camera_frame_id"] = state.get("frame", {}).get("frame_id")
+            reference["surface_calibration_id"] = state.get("surface_calibration_id")
+            if reference["projected"]:
+                for hole in reference["holes"]:
+                    hole["surface_pixel"] = unproject_point(self.transform, hole["position_mm"], self.latest.width, self.latest.height,
+                                                             self.length_mm, self.width_mm)
+            return reference
 
     def frame_png(self, frame_id=None):
         with self.lock:
@@ -306,6 +499,12 @@ class BasicVision:
             self.calibration_id = secrets.token_hex(16)
             return self.state()
 
+    def resume(self):
+        with self.lock:
+            self.selection = self.calibration_id = None
+            self.marker_history.clear()
+            return self.state()
+
     def calibrate(self, payload):
         with self.lock:
             frame, now = self._current()
@@ -318,10 +517,14 @@ class BasicVision:
             corners = payload.get("corners")
             transform = solve_homography(corners, frame.width, frame.height)
             self.transform, self.corners = transform, [list(corner) for corner in corners]
+            self.surface_calibration_id = secrets.token_hex(16)
+            self._reset_probe()
             self.selection = self.calibration_id = None
             return self.state()
 
     def clear(self):
         with self.lock:
             self.transform = self.corners = self.selection = self.calibration_id = None
+            self.surface_calibration_id = None
+            self._reset_probe()
             return self.state()

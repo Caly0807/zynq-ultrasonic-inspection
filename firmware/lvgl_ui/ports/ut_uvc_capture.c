@@ -193,7 +193,7 @@ int main(int count, char **arguments)
             FILE *output = output_descriptor < 0 ? NULL : fdopen(output_descriptor, "wb");
             if (!output) { int error_number = errno; if (output_descriptor >= 0) close(output_descriptor); capture_error(&status, "OPEN_OUTPUT", error_number); goto cleanup; }
             ut_red_marker_t marker = ut_red_marker(rgb, width, height);
-            bool written = fprintf(output, "P6\n# UTCAM2 %u %llu %llu %u %u %u %u %u\n%u %u\n255\n",
+            bool written = fprintf(output, "P6\n# UTCAM3 %u %llu %llu %u %u %u %u %u\n%u %u\n255\n",
                                    buffer.sequence, (unsigned long long)now, (unsigned long long)stream_id,
                                    marker.status, marker.candidate_count, (unsigned)(marker.pixel_x * 1000.0f + .5f),
                                    (unsigned)(marker.pixel_y * 1000.0f + .5f), marker.area_pixels, width, height) > 0;

@@ -86,7 +86,7 @@ def local_scan_diagnostics(path):
         if (record.get("schema") != "ut-local-scan/1" or record.get("phase") not in ("IDLE", "SCANNING", "FINISHED") or
                 record.get("reason") not in ("WAITING", "READY", "NO_CAMERA", "NEED_CORNERS", "NEED_LOCAL_LIVE", "MARKER_LOST",
                                              "HOLD_STILL", "RECORDED", "FINISHED", "ERROR", "UNCALIBRATED", "ALREADY_SAMPLED",
-                                             "TIMING_MISMATCH", "CALIBRATION_CHANGED", "INVALID_ECHO")):
+                                             "TIMING_MISMATCH", "CALIBRATION_CHANGED", "INVALID_ECHO", "NEED_PROBE_ALIGNMENT")):
             return unavailable
         for key in ("updated_monotonic_ns", "sampled_cells", "total_cells", "valid_cells"):
             if type(record.get(key)) is not int or not 0 <= record[key] < 2 ** 63:

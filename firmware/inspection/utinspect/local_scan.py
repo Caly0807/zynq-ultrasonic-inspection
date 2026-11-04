@@ -19,14 +19,16 @@ TIMING_BASIS = "DEQUEUE_TIMESTAMPS_NOT_SENSOR_SYNCHRONIZED"
 REASONS = {"WAITING": 0, "READY": 1, "NO_CAMERA": 2, "NEED_CORNERS": 3,
            "NEED_LOCAL_LIVE": 4, "MARKER_LOST": 5, "HOLD_STILL": 6,
            "RECORDED": 7, "FINISHED": 8, "ERROR": 9, "UNCALIBRATED": 10,
-           "ALREADY_SAMPLED": 11, "TIMING_MISMATCH": 12, "CALIBRATION_CHANGED": 13, "INVALID_ECHO": 14}
+           "ALREADY_SAMPLED": 11, "TIMING_MISMATCH": 12, "CALIBRATION_CHANGED": 13, "INVALID_ECHO": 14,
+           "NEED_PROBE_ALIGNMENT": 15}
 PHASES = {"IDLE": 0, "SCANNING": 1, "FINISHED": 2}
 
 
 class LocalScan:
-    def __init__(self, directory, session, vision, live, *, clock=time.monotonic_ns):
+    def __init__(self, directory, session, vision, live, *, clock=time.monotonic_ns, require_probe_registration=False):
         self.directory, self.session = Path(directory), session
         self.vision, self.live, self.clock = vision, live, clock
+        self.require_probe_registration = require_probe_registration
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
         self.worker = None
@@ -50,7 +52,9 @@ class LocalScan:
     def _key(vision):
         frame = vision.get("frame", {})
         return (frame.get("stream_id"), frame.get("width"), frame.get("height"),
-                tuple(tuple(corner) for corner in vision.get("corners") or []))
+                tuple(tuple(corner) for corner in vision.get("corners") or []),
+                vision.get("surface_calibration_id"),
+                vision.get("probe_registration", {}).get("registration_id"))
 
     def command(self, action, payload):
         if not isinstance(action, str) or not isinstance(payload, dict):
@@ -85,13 +89,25 @@ class LocalScan:
                                        "corners": [[position[0] * selection["width"], position[1] * selection["height"]]
                                                    for position in self.corners]})
                 self.selection_id = None
-                self.reason = "READY"
+                self.reason = "NEED_PROBE_ALIGNMENT"
+            elif action in ("probe-capture", "probe-reset"):
+                if self.phase == "SCANNING":
+                    raise ValueError("Finish the scan before changing probe registration")
+                if action == "probe-reset":
+                    if payload:
+                        raise ValueError("Probe reset takes an empty payload")
+                    state = self.vision.reset_probe_reference()
+                else:
+                    state = self.vision.capture_probe_reference(payload)
+                self.reason = "READY" if state["probe_registration"]["complete"] else "NEED_PROBE_ALIGNMENT"
             elif (action == "scan-start" and set(payload) == {"tracking_confirmed", "normal_incidence_confirmed"} and
                   payload["tracking_confirmed"] is True and payload["normal_incidence_confirmed"] is True):
                 state = self.vision.state()
                 owner, frame = self.live.mapping_frame()
                 if not state.get("preview_available") or state.get("source") != "USB_CAMERA" or not state.get("calibrated"):
                     raise ValueError("Calibrate the real fixed camera before starting a scan")
+                if self.require_probe_registration and not state.get("probe_registration", {}).get("complete"):
+                    raise ValueError("Register four known probe contact points and pass the independent center check before scanning")
                 if owner is None or not owner.startswith("lcd-") or frame is None:
                     raise ValueError("Explicitly start real acquisition from the local screen first")
                 if self.phase == "FINISHED":
@@ -204,24 +220,28 @@ class LocalScan:
                     self.phase = "IDLE"
                     self.live.stop()
                 vision = self.vision.state()
-            if self.phase == "IDLE" and self.reason in {"WAITING", "READY", "NO_CAMERA", "NEED_CORNERS"}:
+            if self.phase == "IDLE" and self.reason in {"WAITING", "READY", "NO_CAMERA", "NEED_CORNERS", "NEED_PROBE_ALIGNMENT"}:
                 self.reason = ("NO_CAMERA" if not vision.get("preview_available") else
-                               "READY" if vision.get("calibrated") else "NEED_CORNERS")
+                               "NEED_CORNERS" if not vision.get("calibrated") else
+                               "READY" if vision.get("probe_registration", {}).get("complete") or not self.require_probe_registration else "NEED_PROBE_ALIGNMENT")
             elif self.phase == "SCANNING" and not vision.get("preview_available") and self.reason != "ERROR":
                 self.reason = "NO_CAMERA"
             snapshot = self.session.summary()
             now = self.clock()
             live = self.live.state()
-            position = vision.get("position_mm")
+            probe = vision.get("probe_registration", {})
+            approximate = bool(vision.get("calibrated") and not probe.get("complete") and not self.require_probe_registration)
+            position = vision.get("position_mm") if probe.get("complete") or approximate else None
             flags = (int(bool(vision.get("preview_available"))) | int(bool(vision.get("calibrated"))) << 1 |
                      int(position is not None) << 2 | int(self.selection_id is not None) << 3 |
-                     int(bool(live["active"])) << 4 | int(bool(self.session.echo.calibrated)) << 5)
+                     int(bool(live["active"])) << 4 | int(bool(self.session.echo.calibrated)) << 5 |
+                     int(bool(probe.get("complete"))) << 6 | int(approximate) << 7)
             source = vision.get("frame", {})
             corners = self.corners + [[-1.0, -1.0]] * (4 - len(self.corners))
             self.sequence = (self.sequence + 1) % 2 ** 32
             values = (PHASES[self.phase], REASONS[self.reason], source.get("width", 0), source.get("height", 0),
                       len(self.corners), snapshot["sampled_cells"], snapshot["total_cells"], snapshot["valid_cells"],
-                      snapshot["suspect_cells"], snapshot["depth_point_count"], self.sequence, 0)
+                      snapshot["suspect_cells"], snapshot["depth_point_count"], self.sequence, probe.get("point_count", 0))
             floats = (*(position if position is not None else [-1.0, -1.0]), snapshot["grid_coverage_percent"], self.skew_ms,
                       *(coordinate for corner in corners for coordinate in corner))
             self.directory.mkdir(parents=True, exist_ok=True)
@@ -233,6 +253,10 @@ class LocalScan:
                                "sampled_cells": snapshot["sampled_cells"], "total_cells": snapshot["total_cells"],
                                "valid_cells": snapshot["valid_cells"], "coverage_percent": snapshot["grid_coverage_percent"],
                                "echo_calibrated": self.session.echo.calibrated, "position_accuracy_verified": False,
+                               "probe_registration": probe,
+                               "position_mode": "APPROXIMATE_SURFACE_PROJECTION" if approximate else "REGISTERED_CONTACT_ESTIMATE" if probe.get("complete") else "UNAVAILABLE",
+                               "coordinate_basis": vision.get("coordinate_basis"),
+                               "reference_hole_positions_used_for_diagnosis": False,
                                "vision_error": str(vision.get("error", ""))[:160],
                                "timing_basis": TIMING_BASIS, "no_network_required": True, "results_volatile": True}
             atomic_json(self.directory / "scan-status.json", self.last_state)

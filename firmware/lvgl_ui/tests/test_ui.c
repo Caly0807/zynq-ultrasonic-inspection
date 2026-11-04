@@ -189,6 +189,30 @@ int main(void)
         if (cycle % 25U == 0U) lv_refr_now(display);
     }
     assert(action_count == actions_before_stress);
+    ut_ui_show_map(false);
+    memset(&frame, 0, sizeof(frame));
+    frame.source = UT_SOURCE_LIVE;
+    frame.count = UT_SAMPLE_CAPACITY;
+    frame.sample_period_us = .04f;
+    memset(frame.samples, 128, sizeof(frame.samples));
+    frame.samples[100] = 190;
+    frame.diagnosis = (ut_diagnosis_t){.present = true, .status = UT_DIAG_UNCALIBRATED,
+        .baseline_valid = true, .flaw_crossed = true, .estimated_depth_valid = true, .estimated_depth_mm = 15.1f};
+    ut_ui_update(&frame);
+    assert(find_label(lv_screen_active(), "15.1"));
+    frame.live_stale = true;
+    ut_ui_update(&frame);
+    assert(find_label(lv_screen_active(), "上一帧"));
+    assert(find_label(lv_screen_active(), "等待新帧"));
+    assert(find_label(lv_screen_active(), "暂存波形 / 不作为当前判读"));
+    assert(!find_label(lv_screen_active(), "15.1"));
+    assert(ut_ui_frame()->count == UT_SAMPLE_CAPACITY);
+    frame.live_stale = false;
+    frame.diagnosis.status = UT_DIAG_INVALID;
+    frame.diagnosis.reason = 9;
+    ut_ui_update(&frame);
+    assert(find_label(lv_screen_active(), "静区噪声过大"));
+    assert(ut_ui_frame()->count == UT_SAMPLE_CAPACITY);
     lv_deinit();
     puts("PASS: actual LVGL controls, pause/resume, parameters, scan navigation, map selection, depths, provenance, extreme dimensions, 250 overlay/navigation stress cycles and rendering");
     return 0;

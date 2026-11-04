@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include "linux_live.h"
 
@@ -25,8 +26,47 @@ static void put_float(uint8_t *bytes, float value)
     put32(bytes, bits);
 }
 
+static void test_presentation(void)
+{
+    ut_frame_t display = {0}, incoming = {0};
+    incoming.source = UT_SOURCE_LIVE;
+    incoming.count = UT_SAMPLE_CAPACITY;
+    incoming.sequence = 17;
+    incoming.captured_monotonic_ns = 1000000000ULL;
+    incoming.samples[40] = 190;
+    incoming.diagnosis.present = true;
+    incoming.diagnosis.status = UT_DIAG_SUSPECT;
+    incoming.diagnosis.depth_valid = true;
+    incoming.diagnosis.depth_mm = 15;
+    assert(ut_linux_live_present(&display, &incoming, 1100000000ULL));
+    assert(!ut_linux_live_present(&display, &incoming, 1150000000ULL));
+    assert(!ut_linux_live_present(&display, NULL, 1400000000ULL));
+    assert(!ut_linux_live_present(&display, NULL, 1500000000ULL));
+    assert(ut_linux_live_present(&display, NULL, 1500000001ULL));
+    assert(display.live_stale && display.count == 4096 && display.samples[40] == 190);
+    assert(!ut_linux_live_present(&display, NULL, 1600000000ULL));
+    incoming.sequence++;
+    incoming.captured_monotonic_ns = 1700000000ULL;
+    assert(ut_linux_live_present(&display, &incoming, 1800000000ULL));
+    assert(!display.live_stale);
+    incoming.diagnosis.status = UT_DIAG_INVALID;
+    incoming.diagnosis.reason = 9;
+    assert(ut_linux_live_present(&display, &incoming, 1850000000ULL));
+    assert(display.diagnosis.status == UT_DIAG_INVALID && display.count == 4096);
+    assert(ut_linux_live_present(&display, NULL, 3700000001ULL));
+    assert(display.source == UT_SOURCE_WAITING && !display.count);
+    assert(!ut_linux_live_present(&display, NULL, 3800000000ULL));
+    display.source = UT_SOURCE_RECORDED;
+    display.count = 4096;
+    assert(!ut_linux_live_present(&display, NULL, 3900000000ULL));
+    assert(display.source == UT_SOURCE_RECORDED && display.count == 4096);
+    assert(!ut_linux_live_present(&display, &incoming, 1600000000ULL));
+    assert(display.source == UT_SOURCE_RECORDED);
+}
+
 int main(void)
 {
+    test_presentation();
     char directory[] = "/tmp/ut-live-test-XXXXXX", path[256];
     uint8_t payload[4137] = {0};
     ut_frame_t frame;
@@ -45,6 +85,7 @@ int main(void)
     save(path, payload, 4136);
     assert(ut_linux_live_read(directory, 1100000000ULL, &frame));
     assert(frame.source == UT_SOURCE_LIVE && frame.count == 4096 && frame.samples[4095] == 190 && frame.gain == 128);
+    assert(frame.sequence == 17 && frame.captured_monotonic_ns == 1000000000ULL && !frame.live_stale);
     assert(!frame.diagnosis.present);
     char result_path[256];
     uint8_t result[72] = {0};
@@ -102,6 +143,15 @@ int main(void)
     assert(ut_linux_live_read(directory, 1100000000ULL, &frame) && !frame.diagnosis.present);
     assert(!ut_linux_live_read(directory, 999999999ULL, &frame));
     assert(!ut_linux_live_read(directory, 1500000001ULL, &frame));
+    struct timespec current;
+    assert(clock_gettime(CLOCK_MONOTONIC, &current) == 0);
+    uint64_t timestamp = (uint64_t)current.tv_sec * 1000000000ULL + (uint64_t)current.tv_nsec;
+    put32(payload + 32, (uint32_t)timestamp);
+    put32(payload + 36, (uint32_t)(timestamp >> 32));
+    save(path, payload, 4136);
+    assert(ut_linux_live_read(directory, 0, &frame));
+    put32(payload + 32, 1000000000);
+    put32(payload + 36, 0);
     for (unsigned flag = 0; flag < 32; flag++) {
         uint32_t mask = 1U << flag;
         if (!(mask & 0xfffff9c9U)) continue;

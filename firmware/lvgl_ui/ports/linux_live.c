@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include "linux_live.h"
 
@@ -78,8 +79,13 @@ bool ut_linux_live_read(const char *directory, uint64_t now_ns, ut_frame_t *fram
         little32(payload + 16) != 40 || little32(payload + 20) != 4096 || little32(payload + 24) > 224) return false;
     uint32_t flags = little32(payload + 12), mode = little32(payload + 28);
     uint64_t timestamp = little32(payload + 32) | (uint64_t)little32(payload + 36) << 32;
+    if (!now_ns) {
+        struct timespec current;
+        if (clock_gettime(CLOCK_MONOTONIC, &current)) return false;
+        now_ns = (uint64_t)current.tv_sec * 1000000000ULL + (uint64_t)current.tv_nsec;
+    }
     if (mode != 3 || flags & ~0x3fffU || flags & 0x39c9U || !(flags & 4U) || timestamp == 0 ||
-        timestamp > now_ns || now_ns - timestamp > 500000000ULL) return false;
+        timestamp > now_ns || now_ns - timestamp > UT_LIVE_FRESH_NS) return false;
     memset(frame, 0, sizeof(*frame));
     memcpy(frame->samples, payload + 40, 4096);
     frame->count = 4096;
@@ -87,8 +93,35 @@ bool ut_linux_live_read(const char *directory, uint64_t now_ns, ut_frame_t *fram
     frame->gain = (uint8_t)little32(payload + 24);
     frame->overrange = (flags & 0x10U) != 0;
     frame->source = UT_SOURCE_LIVE;
+    frame->sequence = little32(payload + 8);
+    frame->captured_monotonic_ns = timestamp;
     read_diagnosis(directory, little32(payload + 8), timestamp, &frame->diagnosis);
     snprintf(frame->source_name, sizeof(frame->source_name), "ARM Linux / guarded ADC LIVE / frame %u", little32(payload + 8));
+    return true;
+}
+
+bool ut_linux_live_present(ut_frame_t *display, const ut_frame_t *incoming, uint64_t now_ns)
+{
+    if (!display || !now_ns) return false;
+    if (incoming && incoming->source == UT_SOURCE_LIVE && incoming->count == UT_SAMPLE_CAPACITY &&
+        incoming->captured_monotonic_ns && incoming->captured_monotonic_ns <= now_ns &&
+        now_ns - incoming->captured_monotonic_ns <= UT_LIVE_FRESH_NS && !incoming->live_stale) {
+        if (!memcmp(display, incoming, sizeof(*display))) return false;
+        *display = *incoming;
+        return true;
+    }
+    if (display->source != UT_SOURCE_LIVE) return false;
+    if (display->captured_monotonic_ns && display->captured_monotonic_ns <= now_ns) {
+        uint64_t age = now_ns - display->captured_monotonic_ns;
+        if (age <= UT_LIVE_FRESH_NS) return false;
+        if (age <= UT_LIVE_HOLD_NS) {
+            if (display->live_stale) return false;
+            display->live_stale = true;
+            return true;
+        }
+    }
+    memset(display, 0, sizeof(*display));
+    display->source = UT_SOURCE_WAITING;
     return true;
 }
 
